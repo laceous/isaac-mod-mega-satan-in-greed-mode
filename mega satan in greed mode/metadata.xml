@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+    <name>Mega Satan in Greed Mode</name>
+    <directory>mega satan in greed mode</directory>
+    <id>2928156221</id>
+    <description>No more useless key pieces in Greed Mode! The Mega Satan door will now spawn after defeating Ultra Greed.
+
+After defeating Mega Satan, a big chest, fresh donation machine, and golden penny will spawn.
+
+To get key pieces from Devil Rooms, you can use my [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2732699827]Satan in Devil Rooms (+Fallen Angels)[/url] mod.</description>
+    <version>1.1</version>
+    <visibility>Public</visibility>
+    <tag id="Lua"/>
+    <tag id="Rooms"/>
+    <tag id="Bosses"/>
+    <tag id="Tweaks"/>
+</metadata>
