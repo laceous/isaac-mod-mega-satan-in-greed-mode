@@ -1,0 +1,1 @@
+# isaac-mod-mega-satan-in-greed-mode
