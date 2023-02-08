@@ -277,13 +277,13 @@ end
 
 function mod:loadMegaSatanRoom()
   local level = game:GetLevel()
-  local roomDesc = level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX)
+  local roomDesc = level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1)
   
   if roomDesc.Data == nil or roomDesc.Data.Type ~= RoomType.ROOM_BOSS or roomDesc.Data.Variant ~= 5000 then
     local roomIdx = level:GetCurrentRoomIndex()
     
     Isaac.ExecuteCommand('goto s.boss.5000') -- mega satan room copied from non-greed mode
-    local dbg = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX)
+    local dbg = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX, -1)
     roomDesc.Data = dbg.Data
     roomDesc.SpawnSeed = dbg.SpawnSeed
     roomDesc.AwardSeed = dbg.AwardSeed
@@ -298,7 +298,7 @@ function mod:addActiveCharges(num)
     local player = game:GetPlayer(i)
     
     for _, slot in ipairs({ ActiveSlot.SLOT_PRIMARY, ActiveSlot.SLOT_SECONDARY, ActiveSlot.SLOT_POCKET }) do -- SLOT_POCKET2
-      for j = num, 1, -1 do
+      for j = 1, num do
         if player:NeedsCharge(slot) then
           player:SetActiveCharge(player:GetActiveCharge(slot) + player:GetBatteryCharge(slot) + 1, slot)
         end
