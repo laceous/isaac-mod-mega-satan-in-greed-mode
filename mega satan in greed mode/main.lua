@@ -4,7 +4,6 @@ local game = Game()
 
 mod.onGameStartHasRun = false
 mod.triggerMegaSatanDoorSpawn = false
-mod.leftRoomIdx = 83 -- starting room (84) - 1
 mod.megaSatan2DeathAnimLastFrame = 129 -- default
 
 mod.state = {}
@@ -83,8 +82,9 @@ function mod:onNewRoom()
   local room = level:GetCurrentRoom()
   local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
+  local currentDimension = mod:getCurrentDimension()
   
-  if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() then
+  if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
     if roomDesc.VisitedCount == 1 then -- new level, reseed, etc
       mod.state.megaSatanDoorSpawned = nil
       mod.state.megaSatanDoorOpened = false
@@ -92,7 +92,7 @@ function mod:onNewRoom()
   end
   
   if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() then
+    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
       mod:loadMegaSatanRoom()
       mod:spawnMegaSatanDoor()
     elseif roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() and room:IsClear() then
@@ -122,17 +122,17 @@ function mod:onUpdate()
   local slot = nil
   
   if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() then
+    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
       slot = DoorSlot.LEFT0
     elseif roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() then
       slot = DoorSlot.UP0
     end
-  end
-  
-  if slot then
-    local door = room:GetDoor(slot)
-    if door and door.TargetRoomIndex == GridRooms.ROOM_MEGA_SATAN_IDX and door.State == DoorState.STATE_OPEN then
-      mod.state.megaSatanDoorOpened = true
+    
+    if slot then
+      local door = room:GetDoor(slot)
+      if door and door.TargetRoomIndex == GridRooms.ROOM_MEGA_SATAN_IDX and door.State == DoorState.STATE_OPEN then
+        mod.state.megaSatanDoorOpened = true
+      end
     end
   end
 end
@@ -206,7 +206,7 @@ function mod:spawnMegaSatanDoor()
   local stage = level:GetStage()
   
   if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() then
+    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
       if mod.state.spawnMegaSatanDoorEarly or mod.state.megaSatanDoorSpawned == 'early' then
         if mod.state.megaSatanDoorSpawned ~= 'late' then
           mod:spawnMegaSatanDoorLeft()
@@ -243,12 +243,13 @@ function mod:spawnMegaSatanDoorLeft()
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
   local currentRoomDesc = level:GetCurrentRoomDesc() -- starting room / empty room
-  local leftRoomDesc = level:GetRoomByIdx(mod.leftRoomIdx, -1)
+  local leftRoomIdx = level:GetCurrentRoomIndex() - 1 -- 84 - 1 = 83
+  local leftRoomDesc = level:GetRoomByIdx(leftRoomIdx, -1)
   local leftSlot = DoorSlot.LEFT0
   
   if leftRoomDesc.Data == nil then
     if level:MakeRedRoomDoor(level:GetCurrentRoomIndex(), leftSlot) then
-      leftRoomDesc = level:GetRoomByIdx(mod.leftRoomIdx, -1)
+      leftRoomDesc = level:GetRoomByIdx(leftRoomIdx, -1)
       if not (leftRoomDesc.Data.Type == currentRoomDesc.Data.Type and leftRoomDesc.Data.Variant == currentRoomDesc.Data.Variant) then
         leftRoomDesc.Data = currentRoomDesc.Data -- small chance it's a special room, override to a normal room
       end
@@ -291,6 +292,27 @@ function mod:loadMegaSatanRoom()
     
     game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE)
   end
+end
+
+function mod:getCurrentDimension()
+  local level = game:GetLevel()
+  return mod:getDimension(level:GetCurrentRoomDesc())
+end
+
+function mod:getDimension(roomDesc)
+  local level = game:GetLevel()
+  local ptrHash = GetPtrHash(roomDesc)
+  
+  -- 0: main dimension
+  -- 1: secondary dimension, used by downpour mirror dimension and mines escape sequence
+  -- 2: death certificate dimension
+  for i = 0, 2 do
+    if ptrHash == GetPtrHash(level:GetRoomByIdx(roomDesc.SafeGridIndex, i)) then
+      return i
+    end
+  end
+  
+  return -1
 end
 
 function mod:addActiveCharges(num)
