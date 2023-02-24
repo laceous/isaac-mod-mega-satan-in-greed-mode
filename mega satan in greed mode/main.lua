@@ -9,7 +9,9 @@ mod.megaSatan2DeathAnimLastFrame = 129 -- default
 mod.state = {}
 mod.state.megaSatanDoorSpawned = nil -- nil, early, late
 mod.state.megaSatanDoorOpened = false -- applies to the last floor so no danger of returning to the floor with glowing hourglass
+mod.state.applyToChallenges = false
 mod.state.spawnMegaSatanDoorEarly = false
+mod.state.spawnFoolCard = false
 
 function mod:onGameStart(isContinue)
   if mod:HasData() then
@@ -24,8 +26,14 @@ function mod:onGameStart(isContinue)
           mod.state.megaSatanDoorOpened = state.megaSatanDoorOpened
         end
       end
+      if type(state.applyToChallenges) == 'boolean' then
+        mod.state.applyToChallenges = state.applyToChallenges
+      end
       if type(state.spawnMegaSatanDoorEarly) == 'boolean' then
         mod.state.spawnMegaSatanDoorEarly = state.spawnMegaSatanDoorEarly
+      end
+      if type(state.spawnFoolCard) == 'boolean' then
+        mod.state.spawnFoolCard = state.spawnFoolCard
       end
     end
   end
@@ -61,7 +69,9 @@ function mod:save(settingsOnly)
       state = {}
     end
     
+    state.applyToChallenges = mod.state.applyToChallenges
     state.spawnMegaSatanDoorEarly = mod.state.spawnMegaSatanDoorEarly
+    state.spawnFoolCard = mod.state.spawnFoolCard
     
     mod:SaveData(json.encode(state))
   else
@@ -70,7 +80,7 @@ function mod:save(settingsOnly)
 end
 
 function mod:onNewRoom()
-  if not game:IsGreedMode() then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -102,7 +112,7 @@ function mod:onNewRoom()
 end
 
 function mod:onUpdate()
-  if not game:IsGreedMode() then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -139,7 +149,7 @@ end
 
 -- filtered to PICKUP_BIGCHEST
 function mod:onPickupInit(pickup)
-  if not game:IsGreedMode() then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -158,7 +168,7 @@ end
 -- it's not clear which seed this is, i don't see any exposed in the api that are set to zero
 -- this is likely related to the rng that determines if we go directly to a cutscene or if a chest + void portal spawns
 function mod:onNpcUpdate(entityNpc)
-  if not game:IsGreedMode() then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -178,6 +188,10 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnBigChest(room:GetGridPosition(centerIdx))
       mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * 15)))
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
+      
+      if mod.state.spawnFoolCard then
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3), Vector.Zero, nil)
+      end
     end
   end
 end
@@ -196,7 +210,7 @@ function mod:spawnGoldenPenny(pos)
 end
 
 function mod:spawnMegaSatanDoor()
-  if not game:IsGreedMode() then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -229,11 +243,13 @@ function mod:spawnMegaSatanDoorTop()
     
     if mod.state.megaSatanDoorOpened then
       local door = room:GetDoor(DoorSlot.UP0)
-      if door then
+      if door and door.TargetRoomIndex == GridRooms.ROOM_MEGA_SATAN_IDX then
         local sprite = door:GetSprite()
         door.State = DoorState.STATE_OPEN
         sprite:Play('Opened')
       end
+    else
+      mod:doDevilKeysIntegration()
     end
   end
 end
@@ -272,6 +288,7 @@ function mod:spawnMegaSatanDoorLeft()
     else
       door.State = DoorState.STATE_CLOSED
       sprite:Play('Closed')
+      mod:doDevilKeysIntegration()
     end
   end
 end
@@ -291,6 +308,20 @@ function mod:loadMegaSatanRoom()
     roomDesc.DecorationSeed = dbg.DecorationSeed
     
     game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE)
+  end
+end
+
+function mod:doDevilKeysIntegration()
+  if not DevilKeysMod then
+    return
+  end
+  
+  DevilKeysMod.Data.SpawnFullNormalKey = true
+  
+  for i = 0, game:GetNumPlayers() - 1 do
+    local player = game:GetPlayer(i)
+    player:AddCacheFlags(CacheFlag.CACHE_FAMILIARS)
+    player:EvaluateItems()
   end
 end
 
@@ -337,6 +368,10 @@ function mod:getMegaSatan2DeathAnimLastFrame()
   return sprite:GetFrame()
 end
 
+function mod:isAnyChallenge()
+  return Isaac.GetChallenge() ~= Challenge.CHALLENGE_NULL
+end
+
 -- start ModConfigMenu --
 function mod:setupModConfigMenu()
   local category = 'Mega Satan in Greed' -- Mode
@@ -349,10 +384,30 @@ function mod:setupModConfigMenu()
     {
       Type = ModConfigMenu.OptionType.BOOLEAN,
       CurrentSetting = function()
+        return mod.state.applyToChallenges
+      end,
+      Display = function()
+        return (mod.state.applyToChallenges and 'Apply' or 'Do not apply') .. ' to challenges'
+      end,
+      OnChange = function(b)
+        mod.state.applyToChallenges = b
+        mod:save(true)
+      end,
+      Info = { 'Should the settings below', 'be applied to challenges?' }
+    }
+  )
+  ModConfigMenu.AddSpace(category, 'Settings')
+  ModConfigMenu.AddTitle(category, 'Settings', 'Mega Satan')
+  ModConfigMenu.AddSetting(
+    category,
+    'Settings',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
         return mod.state.spawnMegaSatanDoorEarly
       end,
       Display = function()
-        return 'Mega Satan Door: ' .. (mod.state.spawnMegaSatanDoorEarly and 'before ultra greed' or 'after ultra greed')
+        return 'Spawn door ' .. (mod.state.spawnMegaSatanDoorEarly and 'before' or 'after') .. ' ultra greed'
       end,
       OnChange = function(b)
         mod.state.spawnMegaSatanDoorEarly = b
@@ -360,6 +415,24 @@ function mod:setupModConfigMenu()
         mod:save(true)
       end,
       Info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' }
+    }
+  )
+  ModConfigMenu.AddSetting(
+    category,
+    'Settings',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return mod.state.spawnFoolCard
+      end,
+      Display = function()
+        return (mod.state.spawnFoolCard and 'Spawn' or 'Do not spawn') .. ' fool card'
+      end,
+      OnChange = function(b)
+        mod.state.spawnFoolCard = b
+        mod:save(true)
+      end,
+      Info = { 'Do you want to spawn 0 - The Fool', 'after defeating Mega Satan?' }
     }
   )
 end

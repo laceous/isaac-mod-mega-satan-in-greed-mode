@@ -7,12 +7,16 @@
 
 After defeating Mega Satan, a big chest, fresh donation machine, and golden penny will spawn.
 
-To get key pieces from Devil Rooms, you can use my [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2732699827]Satan in Devil Rooms (+Fallen Angels)[/url] mod.
+To get key pieces from Devil Rooms, you can use either of these mods:
+[list]
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=2732699827]Satan in Devil Rooms (+Fallen Angels)[/url]
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=2897716537]Devil Keys[/url]
+[/list]
 
-Mod Config Menu will give you the option to fight Mega Satan instead of Ultra Greed or Mega Satan after Ultra Greed.
+Mod Config Menu will give you the option to fight Mega Satan instead of Ultra Greed or Mega Satan after Ultra Greed. You can also choose to spawn a fool card after defeating Mega Satan.
 
 Note: Don't skip Ultra Greed if you're trying to get your Greed Mode unlocks.</description>
-    <version>1.4</version>
+    <version>1.5</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>
