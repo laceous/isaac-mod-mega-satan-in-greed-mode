@@ -90,22 +90,22 @@ function mod:onNewRoom()
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   local currentDimension = mod:getCurrentDimension()
   
-  if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
-    if roomDesc.VisitedCount == 1 then -- new level, reseed, etc
-      mod.state.megaSatanDoorSpawned = nil
-      mod.state.megaSatanDoorOpened = false
-    end
+  -- new level, reseed, etc
+  if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 and room:IsFirstVisit() then
+    mod.state.megaSatanDoorSpawned = nil
+    mod.state.megaSatanDoorOpened = false
   end
   
   if stage == LevelStage.STAGE7_GREED then
     if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
-      mod:loadMegaSatanRoom()
+      if room:IsFirstVisit() then
+        mod:loadMegaSatanRoom()
+      end
       mod:spawnMegaSatanDoor()
-    elseif roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() and room:IsClear() then
+    elseif room:IsCurrentRoomLastBoss() and room:IsClear() then
       mod:spawnMegaSatanDoor()
     end
   end
@@ -127,14 +127,13 @@ function mod:onUpdate()
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   local slot = nil
   
   if stage == LevelStage.STAGE7_GREED then
     if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
       slot = DoorSlot.LEFT0
-    elseif roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() then
+    elseif room:IsCurrentRoomLastBoss() then
       slot = DoorSlot.UP0
     end
     
@@ -155,10 +154,9 @@ function mod:onPickupInit(pickup)
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   
-  if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() then
+  if stage == LevelStage.STAGE7_GREED and room:IsCurrentRoomLastBoss() then
     mod:spawnMegaSatanDoor()
   end
 end
@@ -216,7 +214,6 @@ function mod:spawnMegaSatanDoor()
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   
   if stage == LevelStage.STAGE7_GREED then
@@ -226,7 +223,7 @@ function mod:spawnMegaSatanDoor()
           mod:spawnMegaSatanDoorLeft()
         end
       end
-    elseif roomDesc.GridIndex >= 0 and room:IsCurrentRoomLastBoss() then
+    elseif room:IsCurrentRoomLastBoss() then
       if not mod.state.spawnMegaSatanDoorEarly or mod.state.megaSatanDoorSpawned == 'late' then
         if mod.state.megaSatanDoorSpawned ~= 'early' then
           mod:spawnMegaSatanDoorTop()
