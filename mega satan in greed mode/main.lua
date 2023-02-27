@@ -175,6 +175,7 @@ function mod:onNpcUpdate(entityNpc)
   local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   
+  -- mega satan 2 head
   if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.HitPoints <= 0 then
     local sprite = entityNpc:GetSprite()
     if sprite:IsPlaying('Death') and sprite:GetFrame() >= mod.megaSatan2DeathAnimLastFrame then
@@ -188,7 +189,7 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       
       if mod.state.spawnFoolCard then
-        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3), Vector.Zero, nil)
+        mod:spawnFoolCard(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       end
     end
   end
@@ -205,6 +206,10 @@ end
 
 function mod:spawnGoldenPenny(pos)
   Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COIN, CoinSubType.COIN_GOLDEN, pos, Vector.Zero, nil)
+end
+
+function mod:spawnFoolCard(pos)
+  Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, pos, Vector.Zero, nil)
 end
 
 function mod:spawnMegaSatanDoor()

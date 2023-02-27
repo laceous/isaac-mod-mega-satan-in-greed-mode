@@ -16,7 +16,7 @@ To get key pieces from Devil Rooms, you can use either of these mods:
 Mod Config Menu will give you the option to fight Mega Satan instead of Ultra Greed or Mega Satan after Ultra Greed. You can also choose to spawn a fool card after defeating Mega Satan.
 
 Note: Don't skip Ultra Greed if you're trying to get your Greed Mode unlocks.</description>
-    <version>1.6</version>
+    <version>1.7</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>
