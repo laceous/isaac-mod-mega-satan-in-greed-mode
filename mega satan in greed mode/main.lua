@@ -80,7 +80,7 @@ function mod:save(settingsOnly)
 end
 
 function mod:onNewRoom()
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() then
     return
   end
   
@@ -97,22 +97,29 @@ function mod:onNewRoom()
   if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 and room:IsFirstVisit() then
     mod.state.megaSatanDoorSpawned = nil
     mod.state.megaSatanDoorOpened = false
+    
+    if stage == LevelStage.STAGE7_GREED then
+      mod:loadMegaSatanRoom()
+    end
   end
   
-  if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
-      if room:IsFirstVisit() then
-        mod:loadMegaSatanRoom()
-      end
-      mod:spawnMegaSatanDoor()
-    elseif room:IsCurrentRoomLastBoss() and room:IsClear() then
-      mod:spawnMegaSatanDoor()
-    end
+  if not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge() then
+    return
+  end
+  
+  if stage == LevelStage.STAGE7_GREED and
+     (
+       (level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0) or
+       (room:IsCurrentRoomLastBoss() and room:IsClear())
+     )
+  then
+    mod:spawnMegaSatanDoor()
   end
 end
 
 function mod:onUpdate()
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+    mod.triggerMegaSatanDoorSpawn = false
     return
   end
   
@@ -148,7 +155,7 @@ end
 
 -- filtered to PICKUP_BIGCHEST
 function mod:onPickupInit(pickup)
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -166,7 +173,7 @@ end
 -- it's not clear which seed this is, i don't see any exposed in the api that are set to zero
 -- this is likely related to the rng that determines if we go directly to a cutscene or if a chest + void portal spawns
 function mod:onNpcUpdate(entityNpc)
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -213,7 +220,7 @@ function mod:spawnFoolCard(pos)
 end
 
 function mod:spawnMegaSatanDoor()
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -327,6 +334,26 @@ function mod:doDevilKeysIntegration()
   end
 end
 
+function mod:doStageApiOverride()
+  if not StageAPI or not StageAPI.Loaded then
+    return
+  end
+  
+  local GetNextFreeBaseGridRoom_Old = StageAPI.GetNextFreeBaseGridRoom
+  
+  StageAPI.GetNextFreeBaseGridRoom = function(priorityList, taken, nextIsBoss)
+    local level = game:GetLevel()
+    local stage = level:GetStage()
+    local idx = GridRooms.ROOM_MEGA_SATAN_IDX
+    
+    if game:IsGreedMode() and stage == LevelStage.STAGE7_GREED and not StageAPI.IsIn(taken, idx) then
+      table.insert(taken, idx)
+    end
+    
+    return GetNextFreeBaseGridRoom_Old(priorityList, taken, nextIsBoss)
+  end
+end
+
 function mod:getCurrentDimension()
   local level = game:GetLevel()
   return mod:getDimension(level:GetCurrentRoomDesc())
@@ -376,6 +403,10 @@ end
 
 -- start ModConfigMenu --
 function mod:setupModConfigMenu()
+  if not ModConfigMenu then
+    return
+  end
+  
   local category = 'Mega Satan in Greed' -- Mode
   for _, v in ipairs({ 'Settings' }) do
     ModConfigMenu.RemoveSubcategory(category, v)
@@ -393,6 +424,7 @@ function mod:setupModConfigMenu()
       end,
       OnChange = function(b)
         mod.state.applyToChallenges = b
+        mod.triggerMegaSatanDoorSpawn = true
         mod:save(true)
       end,
       Info = { 'Should the settings below', 'be applied to challenges?' }
@@ -447,6 +479,5 @@ mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.onUpdate)
 mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, mod.onPickupInit, PickupVariant.PICKUP_BIGCHEST)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_MEGA_SATAN_2)
 
-if ModConfigMenu then
-  mod:setupModConfigMenu()
-end
+mod:doStageApiOverride()
+mod:setupModConfigMenu()
