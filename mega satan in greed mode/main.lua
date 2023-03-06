@@ -316,7 +316,7 @@ function mod:loadMegaSatanRoom()
     roomDesc.AwardSeed = dbg.AwardSeed
     roomDesc.DecorationSeed = dbg.DecorationSeed
     
-    game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE)
+    game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE, nil, -1)
   end
 end
 
