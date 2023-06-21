@@ -192,7 +192,7 @@ function mod:onNpcUpdate(entityNpc)
       room:SetClear(true)
       mod:addActiveCharges(1)
       mod:spawnBigChest(room:GetGridPosition(centerIdx))
-      mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * 15)))
+      mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       
       if mod.state.spawnFoolCard then
