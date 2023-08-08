@@ -7,33 +7,22 @@ mod.triggerMegaSatanDoorSpawn = false
 mod.megaSatan2DeathAnimLastFrame = 129 -- default
 
 mod.state = {}
-mod.state.megaSatanDoorSpawned = nil -- nil, early, late
 mod.state.megaSatanDoorOpened = false -- applies to the last floor so no danger of returning to the floor with glowing hourglass
 mod.state.applyToChallenges = false
 mod.state.spawnMegaSatanDoorEarly = false
-mod.state.spawnFoolCard = false
 
 function mod:onGameStart(isContinue)
   if mod:HasData() then
     local _, state = pcall(json.decode, mod:LoadData())
     
     if type(state) == 'table' then
-      if isContinue then
-        if state.megaSatanDoorSpawned == 'early' or state.megaSatanDoorSpawned == 'late' then
-          mod.state.megaSatanDoorSpawned = state.megaSatanDoorSpawned
+      if isContinue and type(state.megaSatanDoorOpened) == 'boolean' then
+        mod.state.megaSatanDoorOpened = state.megaSatanDoorOpened
+      end
+      for _, v in ipairs({ 'applyToChallenges', 'spawnMegaSatanDoorEarly' }) do
+        if type(state[v]) == 'boolean' then
+          mod.state[v] = state[v]
         end
-        if type(state.megaSatanDoorOpened) == 'boolean' then
-          mod.state.megaSatanDoorOpened = state.megaSatanDoorOpened
-        end
-      end
-      if type(state.applyToChallenges) == 'boolean' then
-        mod.state.applyToChallenges = state.applyToChallenges
-      end
-      if type(state.spawnMegaSatanDoorEarly) == 'boolean' then
-        mod.state.spawnMegaSatanDoorEarly = state.spawnMegaSatanDoorEarly
-      end
-      if type(state.spawnFoolCard) == 'boolean' then
-        mod.state.spawnFoolCard = state.spawnFoolCard
       end
     end
   end
@@ -47,10 +36,8 @@ end
 function mod:onGameExit(shouldSave)
   if shouldSave then
     mod:save()
-    mod.state.megaSatanDoorSpawned = nil
     mod.state.megaSatanDoorOpened = false
   else
-    mod.state.megaSatanDoorSpawned = nil
     mod.state.megaSatanDoorOpened = false
     mod:save()
   end
@@ -71,7 +58,6 @@ function mod:save(settingsOnly)
     
     state.applyToChallenges = mod.state.applyToChallenges
     state.spawnMegaSatanDoorEarly = mod.state.spawnMegaSatanDoorEarly
-    state.spawnFoolCard = mod.state.spawnFoolCard
     
     mod:SaveData(json.encode(state))
   else
@@ -90,20 +76,22 @@ function mod:onNewRoom()
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   local currentDimension = mod:getCurrentDimension()
   
   -- new level, reseed, etc
   if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 and room:IsFirstVisit() then
-    mod.state.megaSatanDoorSpawned = nil
     mod.state.megaSatanDoorOpened = false
     
     if stage == LevelStage.STAGE7_GREED then
       mod:loadMegaSatanRoom()
     end
+  elseif stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and room:IsClear() then
+    mod:spawnMegaSatanDoorExit()
   end
   
-  if not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge() then
+  if not mod.state.applyToChallenges and mod:isAnyChallenge() then
     return
   end
   
@@ -118,7 +106,7 @@ function mod:onNewRoom()
 end
 
 function mod:onUpdate()
-  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     mod.triggerMegaSatanDoorSpawn = false
     return
   end
@@ -138,24 +126,16 @@ function mod:onUpdate()
   local slot = nil
   
   if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
-      slot = DoorSlot.LEFT0
-    elseif room:IsCurrentRoomLastBoss() then
-      slot = DoorSlot.UP0
-    end
-    
-    if slot then
-      local door = room:GetDoor(slot)
-      if door and door.TargetRoomIndex == GridRooms.ROOM_MEGA_SATAN_IDX and door.State == DoorState.STATE_OPEN then
-        mod.state.megaSatanDoorOpened = true
-      end
+    local door = mod:getDoorByTargetRoomIdx(GridRooms.ROOM_MEGA_SATAN_IDX)
+    if door and door.State == DoorState.STATE_OPEN then
+      mod.state.megaSatanDoorOpened = true
     end
   end
 end
 
 -- filtered to PICKUP_BIGCHEST
 function mod:onPickupInit(pickup)
-  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -169,11 +149,11 @@ function mod:onPickupInit(pickup)
 end
 
 -- filtered to ENTITY_MEGA_SATAN_2
--- waiting for MC_POST_NPC_DEATH crashes the game with: RNG Seed is zero!
+-- waiting for MC_POST_NPC_DEATH/MC_PRE_SPAWN_CLEAN_AWARD crashes the game with: RNG Seed is zero!
 -- it's not clear which seed this is, i don't see any exposed in the api that are set to zero
 -- this is likely related to the rng that determines if we go directly to a cutscene or if a chest + void portal spawns
 function mod:onNpcUpdate(entityNpc)
-  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -195,9 +175,7 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       
-      if mod.state.spawnFoolCard then
-        mod:spawnFoolCard(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
-      end
+      mod:spawnMegaSatanDoorExit()
     end
   end
 end
@@ -215,12 +193,8 @@ function mod:spawnGoldenPenny(pos)
   Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COIN, CoinSubType.COIN_GOLDEN, pos, Vector.Zero, nil)
 end
 
-function mod:spawnFoolCard(pos)
-  Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, pos, Vector.Zero, nil)
-end
-
 function mod:spawnMegaSatanDoor()
-  if not game:IsGreedMode() or (not mod.state.megaSatanDoorSpawned and not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
     return
   end
   
@@ -228,18 +202,12 @@ function mod:spawnMegaSatanDoor()
   local room = level:GetCurrentRoom()
   local stage = level:GetStage()
   
-  if stage == LevelStage.STAGE7_GREED then
-    if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
-      if mod.state.spawnMegaSatanDoorEarly or mod.state.megaSatanDoorSpawned == 'early' then
-        if mod.state.megaSatanDoorSpawned ~= 'late' then
-          mod:spawnMegaSatanDoorLeft()
-        end
-      end
-    elseif room:IsCurrentRoomLastBoss() then
-      if not mod.state.spawnMegaSatanDoorEarly or mod.state.megaSatanDoorSpawned == 'late' then
-        if mod.state.megaSatanDoorSpawned ~= 'early' then
-          mod:spawnMegaSatanDoorTop()
-        end
+  if not mod:getDoorByTargetRoomIdx(GridRooms.ROOM_MEGA_SATAN_IDX) then
+    if stage == LevelStage.STAGE7_GREED then
+      if mod.state.spawnMegaSatanDoorEarly and level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and mod:getCurrentDimension() == 0 then
+        mod:spawnMegaSatanDoorNotTop()
+      elseif not mod.state.spawnMegaSatanDoorEarly and room:IsCurrentRoomLastBoss() then
+        mod:spawnMegaSatanDoorTop()
       end
     end
   end
@@ -247,9 +215,9 @@ end
 
 function mod:spawnMegaSatanDoorTop()
   local room = game:GetRoom()
+  
+  -- UP0 only
   if room:TrySpawnMegaSatanRoomDoor(true) then
-    mod.state.megaSatanDoorSpawned = 'late'
-    
     if mod.state.megaSatanDoorOpened then
       local door = room:GetDoor(DoorSlot.UP0)
       if door and door.TargetRoomIndex == GridRooms.ROOM_MEGA_SATAN_IDX then
@@ -263,43 +231,61 @@ function mod:spawnMegaSatanDoorTop()
   end
 end
 
--- it's possible to spawn a GRID_DOOR/DOOR_LOCKED_KEYFAMILIAR on its own, but the key doesn't interact with it
-function mod:spawnMegaSatanDoorLeft()
-  local level = game:GetLevel()
-  local room = level:GetCurrentRoom()
-  local currentRoomDesc = level:GetCurrentRoomDesc() -- starting room / empty room
-  local leftRoomIdx = level:GetCurrentRoomIndex() - 1 -- 84 - 1 = 83
-  local leftRoomDesc = level:GetRoomByIdx(leftRoomIdx, -1)
-  local leftSlot = DoorSlot.LEFT0
+function mod:spawnMegaSatanDoorNotTop()
+  local room = game:GetRoom()
   
-  if leftRoomDesc.Data == nil then
-    if level:MakeRedRoomDoor(level:GetCurrentRoomIndex(), leftSlot) then
-      leftRoomDesc = level:GetRoomByIdx(leftRoomIdx, -1)
-      if not (leftRoomDesc.Data.Type == currentRoomDesc.Data.Type and leftRoomDesc.Data.Variant == currentRoomDesc.Data.Variant) then
-        leftRoomDesc.Data = currentRoomDesc.Data -- small chance it's a special room, override to a normal room
+  -- usually left, but could be right or down (random)
+  if room:TrySpawnBlueWombDoor(false, true, true) then -- TrySpawnBossRushDoor
+    local door = mod:getDoorByTargetRoomIdx(GridRooms.ROOM_BLUE_WOOM_IDX)
+    if door then
+      local sprite = door:GetSprite()
+      door:SetVariant(DoorVariant.DOOR_LOCKED_KEYFAMILIAR)
+      door.TargetRoomType = RoomType.ROOM_BOSS
+      door.TargetRoomIndex = GridRooms.ROOM_MEGA_SATAN_IDX
+      door.OpenAnimation = 'Open' -- Opened by default which doesn't show the opening animation
+      sprite:Load('gfx/grid/door_24_megasatandoor.anm2', true)
+      
+      if mod.state.megaSatanDoorOpened then
+        door.State = DoorState.STATE_OPEN
+        sprite:Play('Opened')
+      else
+        door.State = DoorState.STATE_CLOSED
+        sprite:Play('Closed')
+        mod:doDevilKeysIntegration()
       end
     end
   end
+end
+
+function mod:spawnMegaSatanDoorExit()
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
   
-  local door = room:GetDoor(leftSlot)
-  if door then
-    mod.state.megaSatanDoorSpawned = 'early'
-    
-    local sprite = door:GetSprite()
-    door:SetVariant(DoorVariant.DOOR_LOCKED_KEYFAMILIAR)
-    door:SetRoomTypes(currentRoomDesc.Data.Type, RoomType.ROOM_BOSS)
-    door.TargetRoomIndex = GridRooms.ROOM_MEGA_SATAN_IDX
-    sprite:Load('gfx/grid/door_24_megasatandoor.anm2', true)
-    
-    if mod.state.megaSatanDoorOpened then
-      door.State = DoorState.STATE_OPEN
-      sprite:Play('Opened')
-    else
-      door.State = DoorState.STATE_CLOSED
-      sprite:Play('Closed')
-      mod:doDevilKeysIntegration()
+  -- this goes to DOWN0 because it's the only available door slot
+  if room:TrySpawnBlueWombDoor(false, true, true) then -- TrySpawnBossRushDoor
+    local door = room:GetDoor(DoorSlot.DOWN0)
+    if door then
+      local sprite = door:GetSprite()
+      door.TargetRoomType = RoomType.ROOM_DEFAULT -- ROOM_BOSS
+      door.TargetRoomIndex = level:GetPreviousRoomIndex() -- GetStartingRoomIndex
+      sprite:Load('gfx/grid/door_24_megasatandoor.anm2', true)
+      sprite:Play('Opened', true)
     end
   end
+end
+
+-- return first occurrence
+function mod:getDoorByTargetRoomIdx(idx)
+  local room = game:GetRoom()
+  
+  for i = 0, DoorSlot.NUM_DOOR_SLOTS - 1 do
+    local door = room:GetDoor(i)
+    if door and door.TargetRoomIndex == idx then
+      return door
+    end
+  end
+  
+  return nil
 end
 
 function mod:loadMegaSatanRoom()
@@ -449,24 +435,6 @@ function mod:setupModConfigMenu()
         mod:save(true)
       end,
       Info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' }
-    }
-  )
-  ModConfigMenu.AddSetting(
-    category,
-    'Settings',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return mod.state.spawnFoolCard
-      end,
-      Display = function()
-        return (mod.state.spawnFoolCard and 'Spawn' or 'Do not spawn') .. ' fool card'
-      end,
-      OnChange = function(b)
-        mod.state.spawnFoolCard = b
-        mod:save(true)
-      end,
-      Info = { 'Do you want to spawn 0 - The Fool', 'after defeating Mega Satan?' }
     }
   )
 end
