@@ -165,7 +165,7 @@ function mod:onNpcUpdate(entityNpc)
   -- mega satan 2 head
   if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.HitPoints <= 0 then
     local sprite = entityNpc:GetSprite()
-    if sprite:IsPlaying('Death') and sprite:GetFrame() >= mod.megaSatan2DeathAnimLastFrame then
+    if sprite:IsPlaying('Death') and sprite:GetFrame() + sprite.PlaybackSpeed - 1 >= mod.megaSatan2DeathAnimLastFrame then
       local centerIdx = room:GetGridIndex(room:GetCenterPos())
       
       entityNpc:Remove()
