@@ -293,16 +293,26 @@ function mod:loadMegaSatanRoom()
   local roomDesc = level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1)
   
   if roomDesc.Data == nil or roomDesc.Data.Type ~= RoomType.ROOM_BOSS or roomDesc.Data.Variant ~= 5000 then
-    local roomIdx = level:GetCurrentRoomIndex()
-    
-    Isaac.ExecuteCommand('goto s.boss.5000') -- mega satan room copied from non-greed mode
-    local dbg = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX, -1)
-    roomDesc.Data = dbg.Data
-    roomDesc.SpawnSeed = dbg.SpawnSeed
-    roomDesc.AwardSeed = dbg.AwardSeed
-    roomDesc.DecorationSeed = dbg.DecorationSeed
-    
-    game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE, nil, -1)
+    if REPENTOGON then
+      local seeds = game:GetSeeds()
+      local seed = seeds:GetStageSeed(level:GetStage())
+      local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 5000, 1)
+      roomDesc.Data = data
+      roomDesc.SpawnSeed = seed
+      roomDesc.AwardSeed = seed
+      roomDesc.DecorationSeed = seed
+    else
+      local roomIdx = level:GetCurrentRoomIndex()
+      
+      Isaac.ExecuteCommand('goto s.boss.5000') -- mega satan room copied from non-greed mode
+      local dbg = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX, -1)
+      roomDesc.Data = dbg.Data
+      roomDesc.SpawnSeed = dbg.SpawnSeed
+      roomDesc.AwardSeed = dbg.AwardSeed
+      roomDesc.DecorationSeed = dbg.DecorationSeed
+      
+      game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE, nil, -1)
+    end
   end
 end
 
