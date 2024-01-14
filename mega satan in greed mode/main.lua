@@ -174,8 +174,128 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnBigChest(room:GetGridPosition(centerIdx))
       mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
-      
       mod:spawnMegaSatanDoorExit()
+      
+      mod:doRepentogonPostMegaSatan2Logic()
+      
+      Isaac.RunCallbackWithParam(ModCallbacks.MC_POST_NPC_DEATH, EntityType.ENTITY_MEGA_SATAN_2, entityNpc)
+    end
+  end
+end
+
+function mod:doRepentogonPostMegaSatan2Logic()
+  if REPENTOGON then
+    local gameData = Isaac.GetPersistentGameData()
+    gameData:IncreaseEventCounter(EventCounter.MEGA_SATAN_KILLS, 1)
+    
+    local playerTypeAchievements = {
+      [PlayerType.PLAYER_ISAAC] = Achievement.CRY_BABY,
+      [PlayerType.PLAYER_MAGDALENE] = Achievement.RED_BABY,
+      [PlayerType.PLAYER_CAIN] = Achievement.GREEN_BABY,
+      [PlayerType.PLAYER_JUDAS] = Achievement.BROWN_BABY,
+      [PlayerType.PLAYER_BLACKJUDAS] = Achievement.BROWN_BABY,
+      [PlayerType.PLAYER_BLUEBABY] = Achievement.BLUE_COOP_BABY,
+      [PlayerType.PLAYER_EVE] = Achievement.LIL_BABY,
+      [PlayerType.PLAYER_SAMSON] = Achievement.RAGE_BABY,
+      [PlayerType.PLAYER_AZAZEL] = Achievement.BLACK_BABY,
+      [PlayerType.PLAYER_LAZARUS] = Achievement.LONG_BABY,
+      [PlayerType.PLAYER_LAZARUS2] = Achievement.LONG_BABY,
+      [PlayerType.PLAYER_EDEN] = Achievement.YELLOW_BABY,
+      [PlayerType.PLAYER_THELOST] = Achievement.WHITE_BABY,
+      [PlayerType.PLAYER_LILITH] = Achievement.BIG_BABY,
+      [PlayerType.PLAYER_KEEPER] = Achievement.NOOSE_BABY,
+      [PlayerType.PLAYER_APOLLYON] = Achievement.MORT_BABY,
+      [PlayerType.PLAYER_THEFORGOTTEN] = Achievement.BOUND_BABY,
+      [PlayerType.PLAYER_THESOUL] = Achievement.BOUND_BABY,
+      [PlayerType.PLAYER_BETHANY] = Achievement.GLOWING_BABY,
+      [PlayerType.PLAYER_JACOB] = Achievement.ILLUSION_BABY,
+      [PlayerType.PLAYER_ESAU] = Achievement.ILLUSION_BABY,
+      [PlayerType.PLAYER_ISAAC_B] = Achievement.MEGA_CHEST,
+      [PlayerType.PLAYER_MAGDALENE_B] = Achievement.QUEEN_OF_HEARTS,
+      [PlayerType.PLAYER_CAIN_B] = Achievement.GOLDEN_PILLS,
+      [PlayerType.PLAYER_JUDAS_B] = Achievement.BLACK_SACK,
+      [PlayerType.PLAYER_BLUEBABY_B] = Achievement.CHARMING_POOP,
+      [PlayerType.PLAYER_EVE_B] = Achievement.HORSE_PILLS,
+      [PlayerType.PLAYER_SAMSON_B] = Achievement.CRANE_GAME,
+      [PlayerType.PLAYER_AZAZEL_B] = Achievement.HELL_GAME,
+      [PlayerType.PLAYER_LAZARUS_B] = Achievement.WOODEN_CHEST,
+      [PlayerType.PLAYER_LAZARUS2_B] = Achievement.WOODEN_CHEST,
+      [PlayerType.PLAYER_EDEN_B] = Achievement.WILD_CARD,
+      [PlayerType.PLAYER_THELOST_B] = Achievement.HAUNTED_CHEST,
+      [PlayerType.PLAYER_LILITH_B] = Achievement.FOOLS_GOLD,
+      [PlayerType.PLAYER_KEEPER_B] = Achievement.GOLDEN_PENNIES,
+      [PlayerType.PLAYER_APOLLYON_B] = Achievement.ROTTEN_BEGGAR,
+      [PlayerType.PLAYER_THEFORGOTTEN_B] = Achievement.GOLDEN_BATTERIES,
+      [PlayerType.PLAYER_THESOUL_B] = Achievement.GOLDEN_BATTERIES,
+      [PlayerType.PLAYER_BETHANY_B] = Achievement.CONFESSIONAL,
+      [PlayerType.PLAYER_JACOB_B] = Achievement.GOLDEN_TRINKETS,
+      [PlayerType.PLAYER_JACOB2_B] = Achievement.GOLDEN_TRINKETS,
+    }
+    
+    for _, player in ipairs(PlayerManager.GetPlayers()) do
+      local isBaby = player:GetBabySkin() ~= BabySubType.BABY_UNASSIGNED
+      local isCoopGhost = player:IsCoopGhost()
+      local isChild = player.Parent ~= nil
+      if not isBaby and not isCoopGhost and not isChild then
+        local playerType = player:GetPlayerType()
+        local completionType = CompletionType.MEGA_SATAN
+        local completionMark = game.Difficulty == Difficulty.DIFFICULTY_GREED and 1 or 2 -- DIFFICULTY_GREEDIER
+        if completionMark > Isaac.GetCompletionMark(playerType, completionType) then
+          Isaac.SetCompletionMark(playerType, completionType, completionMark)
+        end
+        
+        -- mega satan + player type
+        local playerTypeAchievement = playerTypeAchievements[playerType]
+        if playerTypeAchievement and not gameData:Unlocked(playerTypeAchievement) then
+          gameData:TryUnlock(playerTypeAchievement)
+        end
+      end
+    end
+    
+    -- mega satan
+    if not gameData:Unlocked(Achievement.APOLLYON) then
+      gameData:TryUnlock(Achievement.APOLLYON)
+    end
+    
+    -- mega satan + negative
+    if gameData:Unlocked(Achievement.THE_NEGATIVE) then
+      for _, achievement in ipairs({ Achievement.CHALLENGE_26_I_RULE, Achievement.CHALLENGE_31_BACKASSWARDS, Achievement.CHALLENGE_34_ULTRA_HARD }) do
+        if not gameData:Unlocked(achievement) then
+          gameData:TryUnlock(achievement)
+        end
+      end
+    end
+    
+    -- mega satan + all regular characters
+    local allRegularCharactersBeatMegaSatan = true
+    for _, playerType in ipairs({
+                                 PlayerType.PLAYER_ISAAC,
+                                 PlayerType.PLAYER_MAGDALENE,
+                                 PlayerType.PLAYER_CAIN,
+                                 PlayerType.PLAYER_JUDAS,
+                                 PlayerType.PLAYER_BLUEBABY,
+                                 PlayerType.PLAYER_EVE,
+                                 PlayerType.PLAYER_SAMSON,
+                                 PlayerType.PLAYER_AZAZEL,
+                                 PlayerType.PLAYER_LAZARUS,
+                                 PlayerType.PLAYER_EDEN,
+                                 PlayerType.PLAYER_THELOST,
+                                 PlayerType.PLAYER_LILITH,
+                                 PlayerType.PLAYER_KEEPER,
+                                 PlayerType.PLAYER_APOLLYON,
+                                 PlayerType.PLAYER_THEFORGOTTEN,
+                                 PlayerType.PLAYER_BETHANY,
+                                 PlayerType.PLAYER_JACOB,
+                               })
+    do
+      -- alt: check achievements
+      if Isaac.GetCompletionMark(playerType, CompletionType.MEGA_SATAN) <= 0 then
+        allRegularCharactersBeatMegaSatan = false
+        break
+      end
+    end
+    if allRegularCharactersBeatMegaSatan and not gameData:Unlocked(Achievement.MEGA_BLAST) then
+      gameData:TryUnlock(Achievement.MEGA_BLAST)
     end
   end
 end
