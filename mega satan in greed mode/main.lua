@@ -234,9 +234,8 @@ function mod:doRepentogonPostMegaSatan2Logic()
     
     for _, player in ipairs(PlayerManager.GetPlayers()) do
       local isBaby = player:GetBabySkin() ~= BabySubType.BABY_UNASSIGNED
-      local isCoopGhost = player:IsCoopGhost()
       local isChild = player.Parent ~= nil
-      if not isBaby and not isCoopGhost and not isChild then
+      if not isBaby and not isChild then
         local playerType = player:GetPlayerType()
         local completionType = CompletionType.MEGA_SATAN
         local completionMark = game.Difficulty == Difficulty.DIFFICULTY_GREED and 1 or 2 -- DIFFICULTY_GREEDIER
