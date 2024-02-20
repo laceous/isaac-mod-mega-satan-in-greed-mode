@@ -176,7 +176,9 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       mod:spawnMegaSatanDoorExit()
       
-      mod:doRepentogonPostMegaSatan2Logic()
+      if not mod:isAnyChallenge() then
+        mod:doRepentogonPostMegaSatan2Logic()
+      end
       
       Isaac.RunCallbackWithParam(ModCallbacks.MC_POST_NPC_DEATH, EntityType.ENTITY_MEGA_SATAN_2, entityNpc)
     end
