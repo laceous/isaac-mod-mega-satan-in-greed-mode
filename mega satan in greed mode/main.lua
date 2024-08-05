@@ -309,7 +309,7 @@ function mod:loadMegaSatanRoom()
     if REPENTOGON then
       local seeds = game:GetSeeds()
       local seed = seeds:GetStageSeed(level:GetStage())
-      local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 5000, 1)
+      local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 5000, -1)
       roomDesc.Data = data
       roomDesc.SpawnSeed = seed
       roomDesc.AwardSeed = seed
