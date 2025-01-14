@@ -305,7 +305,7 @@ function mod:loadMegaSatanRoom()
   local level = game:GetLevel()
   local roomDesc = level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1)
   
-  if roomDesc.Data == nil or roomDesc.Data.Type ~= RoomType.ROOM_BOSS or roomDesc.Data.Variant ~= 5000 then
+  if roomDesc.Data == nil or roomDesc.Data.Type ~= RoomType.ROOM_BOSS or roomDesc.Data.StageID ~= 0 or roomDesc.Data.Variant ~= 5000 then
     if REPENTOGON then
       local seeds = game:GetSeeds()
       local seed = seeds:GetStageSeed(level:GetStage())
