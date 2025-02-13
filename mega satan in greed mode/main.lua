@@ -348,18 +348,20 @@ function mod:doStageApiOverride()
     return
   end
   
-  local GetNextFreeBaseGridRoom_Old = StageAPI.GetNextFreeBaseGridRoom
+  local getNextFreeBaseGridRoomOrig = StageAPI.GetNextFreeBaseGridRoom
   
-  StageAPI.GetNextFreeBaseGridRoom = function(priorityList, taken, nextIsBoss)
-    local level = game:GetLevel()
-    local stage = level:GetStage()
-    local idx = GridRooms.ROOM_MEGA_SATAN_IDX
-    
-    if game:IsGreedMode() and stage == LevelStage.STAGE7_GREED and not StageAPI.IsIn(taken, idx) then
-      table.insert(taken, idx)
+  if type(getNextFreeBaseGridRoomOrig) == 'function' then
+    StageAPI.GetNextFreeBaseGridRoom = function(priorityList, taken, nextIsBoss)
+      local level = game:GetLevel()
+      local stage = level:GetStage()
+      local idx = GridRooms.ROOM_MEGA_SATAN_IDX
+      
+      if game:IsGreedMode() and stage == LevelStage.STAGE7_GREED and not StageAPI.IsIn(taken, idx) then
+        table.insert(taken, idx)
+      end
+      
+      return getNextFreeBaseGridRoomOrig(priorityList, taken, nextIsBoss)
     end
-    
-    return GetNextFreeBaseGridRoom_Old(priorityList, taken, nextIsBoss)
   end
 end
 
