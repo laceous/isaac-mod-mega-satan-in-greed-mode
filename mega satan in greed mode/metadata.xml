@@ -18,7 +18,7 @@ Mod Config Menu will give you the option to fight Mega Satan instead of Ultra Gr
 If you have Repentogon then you'll get Mega Satan completion marks, and built-in characters will earn their achievements. Modded characters may require some additional work.
 
 Note: Don't skip Ultra Greed if you're trying to get your Greed Mode unlocks.</description>
-    <version>1.22</version>
+    <version>1.23</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>
