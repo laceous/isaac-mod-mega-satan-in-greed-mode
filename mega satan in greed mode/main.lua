@@ -409,7 +409,8 @@ function mod:getMegaSatan2DeathAnimLastFrame()
 end
 
 function mod:isAnyChallenge()
-  return Isaac.GetChallenge() ~= Challenge.CHALLENGE_NULL
+  return Isaac.GetChallenge() ~= Challenge.CHALLENGE_NULL or
+         (REPENTOGON and game:GetSeeds():IsCustomRun() and DailyChallenge.GetChallengeParams():GetEndStage() > 0)
 end
 
 -- start ModConfigMenu --
