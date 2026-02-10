@@ -1,5 +1,6 @@
 local mod = RegisterMod('Mega Satan in Greed Mode', 1)
 local json = require('json')
+local music = MusicManager()
 local game = Game()
 
 mod.onGameStartHasRun = false
@@ -170,6 +171,7 @@ function mod:onNpcUpdate(entityNpc)
       
       entityNpc:Remove()
       room:SetClear(true)
+      music:Play(Music.MUSIC_BOSS_OVER) -- override MUSIC_SATAN_BOSS
       mod:addActiveCharges(1)
       mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
       mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
