@@ -171,12 +171,15 @@ function mod:onNpcUpdate(entityNpc)
       
       entityNpc:Remove()
       room:SetClear(true)
-      music:Play(Music.MUSIC_BOSS_OVER) -- override MUSIC_SATAN_BOSS
       mod:addActiveCharges(1)
       mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
       mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
       mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
       mod:spawnMegaSatanDoorExit()
+      
+      -- override MUSIC_SATAN_BOSS
+      music:Play(room:GetDecorationSeed() % 2 == 0 and Music.MUSIC_JINGLE_BOSS_OVER or Music.MUSIC_JINGLE_BOSS_OVER2)
+      music:Queue(Music.MUSIC_BOSS_OVER)
       
       if not mod:isAnyChallenge() then
         mod:doRepentogonPostMegaSatan2Logic()
