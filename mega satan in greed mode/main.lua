@@ -178,7 +178,7 @@ function mod:onNpcUpdate(entityNpc)
       mod:spawnMegaSatanDoorExit()
       
       -- override MUSIC_SATAN_BOSS
-      music:Play(room:GetDecorationSeed() % 2 == 0 and Music.MUSIC_JINGLE_BOSS_OVER or Music.MUSIC_JINGLE_BOSS_OVER2)
+      music:Play(room:GetDecorationSeed() % 2 == 0 and Music.MUSIC_JINGLE_BOSS_OVER or Music.MUSIC_JINGLE_BOSS_OVER2, Options.MusicVolume)
       music:Queue(Music.MUSIC_BOSS_OVER)
       
       if not mod:isAnyChallenge() then
