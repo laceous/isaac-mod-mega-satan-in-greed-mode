@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-    <name>Mega Satan in Greed Mode</name>
+    <name>Mega Satan in Greed Mode (+Delirium)</name>
     <directory>mega satan in greed mode</directory>
     <id>2928156221</id>
     <description>No more useless key pieces in Greed Mode! The Mega Satan door will now spawn after defeating Ultra Greed.
@@ -17,8 +17,20 @@ Mod Config Menu will give you the option to fight Mega Satan instead of Ultra Gr
 
 If you have Repentogon then you'll get Mega Satan completion marks, and built-in characters will earn their achievements. Modded characters may require some additional work.
 
-Note: Don't skip Ultra Greed if you're trying to get your Greed Mode unlocks.</description>
-    <version>1.27</version>
+Note: Don't skip Ultra Greed if you're trying to get your Greed Mode unlocks.
+
+Update: Once you defeat Mega Satan or Ultra Greedier, stairs will spawn allowing you to fight Delirium. If you bring a Fool card, you can also fight Delirium after Ultra Greed. Sprite support for the following mods has been added (must be installed separately):
+[list]
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=2662678652]Unique Delirium Boss Door[/url]
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=2810291641]Unique Delirium Door but Fancy[/url]
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=3280852083]Ultra Greed in Normal Mode[/url] (better ultra greed sprites for delirium)
+    [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=1914928683]Ultra Greed Form for Delirium[/url] (don't install &quot;Greed Delirium&quot; if it prompts you)
+[/list]
+
+After defeating Delirium, a big chest, fresh donation machine, and cards(?!) will spawn. If you have Repentogon then you'll get Delirium completion marks, and built-in characters will earn their achievements.
+
+Recommendation: If you're not using Repentogon then you should install [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2926219587]NoDelirium Fix[/url] so the Ultra Greed doors don't glitch out Delirium.</description>
+    <version>1.28</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>

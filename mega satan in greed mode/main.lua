@@ -1,6 +1,7 @@
 local mod = RegisterMod('Mega Satan in Greed Mode', 1)
 local json = require('json')
 local music = MusicManager()
+local sfx = SFXManager()
 local game = Game()
 
 mod.onGameStartHasRun = false
@@ -92,17 +93,22 @@ function mod:onNewRoom()
     mod:spawnMegaSatanDoorExit()
   end
   
-  if not mod.state.applyToChallenges and mod:isAnyChallenge() then
-    return
+  if not (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+    if stage == LevelStage.STAGE7_GREED then
+      if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
+        mod:spawnMegaSatanDoor()
+        
+        if level:GetRooms():Get(level:GetLastBossRoomListIndex()).Clear or level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1).Clear then
+          mod:spawnDeliriumRoom()
+        end
+      elseif room:IsCurrentRoomLastBoss() and room:IsClear() then
+        mod:spawnMegaSatanDoor()
+      end
+    end
   end
   
-  if stage == LevelStage.STAGE7_GREED and
-     (
-       (level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0) or
-       (room:IsCurrentRoomLastBoss() and room:IsClear())
-     )
-  then
-    mod:spawnMegaSatanDoor()
+  if stage == LevelStage.STAGE7_GREED then
+    mod:doUniqueDeliriumBossDoorIntegration()
   end
 end
 
@@ -124,7 +130,6 @@ function mod:onUpdate()
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
   local stage = level:GetStage()
-  local slot = nil
   
   if stage == LevelStage.STAGE7_GREED then
     local door = mod:getDoorByTargetRoomIdx(GridRooms.ROOM_MEGA_SATAN_IDX)
@@ -146,15 +151,18 @@ function mod:onPickupInit(pickup)
   
   if stage == LevelStage.STAGE7_GREED and room:IsCurrentRoomLastBoss() then
     mod:spawnMegaSatanDoor()
+    if game.Difficulty == Difficulty.DIFFICULTY_GREEDIER then
+      mod:spawnStairs(room:GetGridPosition(room:GetGridIndex(pickup.Position) + (1 * room:GetGridWidth())))
+    end
   end
 end
 
--- filtered to ENTITY_MEGA_SATAN_2
+-- filtered to ENTITY_MEGA_SATAN_2 / ENTITY_DELIRIUM / ENTITY_ULTRA_GREED
 -- waiting for MC_POST_NPC_DEATH/MC_PRE_SPAWN_CLEAN_AWARD crashes the game with: RNG Seed is zero!
 -- it's not clear which seed this is, i don't see any exposed in the api that are set to zero
 -- this is likely related to the rng that determines if we go directly to a cutscene or if a chest + void portal spawns
 function mod:onNpcUpdate(entityNpc)
-  if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
+  if not game:IsGreedMode() then
     return
   end
   
@@ -163,29 +171,95 @@ function mod:onNpcUpdate(entityNpc)
   local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   
-  -- mega satan 2 head
-  if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.HitPoints <= 0 then
-    local sprite = entityNpc:GetSprite()
-    if sprite:IsPlaying('Death') and sprite:GetFrame() + sprite.PlaybackSpeed - 1 >= mod.megaSatan2DeathAnimLastFrame then
-      local centerIdx = room:GetGridIndex(room:GetCenterPos())
-      
-      entityNpc:Remove()
-      room:SetClear(true)
-      mod:addActiveCharges(1)
-      mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
-      mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
-      mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
-      mod:spawnMegaSatanDoorExit()
-      
-      -- override MUSIC_SATAN_BOSS
-      music:Play(room:GetDecorationSeed() % 2 == 0 and Music.MUSIC_JINGLE_BOSS_OVER or Music.MUSIC_JINGLE_BOSS_OVER2, Options.MusicVolume)
-      music:Queue(Music.MUSIC_BOSS_OVER)
-      
-      if not mod:isAnyChallenge() then
-        mod:doRepentogonPostMegaSatan2Logic()
+  if entityNpc.Type == EntityType.ENTITY_MEGA_SATAN_2 then
+    -- mega satan 2 head
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.HitPoints <= 0 then
+      local sprite = entityNpc:GetSprite()
+      if sprite:IsPlaying('Death') and sprite:GetFrame() + sprite.PlaybackSpeed - 1 >= mod.megaSatan2DeathAnimLastFrame then
+        local centerIdx = room:GetGridIndex(room:GetCenterPos())
+        
+        entityNpc:Remove()
+        room:SetClear(true)
+        mod:addActiveCharges(1)
+        mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
+        mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (1 * room:GetGridWidth())))
+        mod:spawnStairs(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
+        mod:spawnGoldenPenny(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
+        mod:spawnMegaSatanDoorExit()
+        
+        -- override MUSIC_SATAN_BOSS
+        music:Play(room:GetDecorationSeed() % 2 == 0 and Music.MUSIC_JINGLE_BOSS_OVER or Music.MUSIC_JINGLE_BOSS_OVER2, Options.MusicVolume)
+        music:Queue(Music.MUSIC_BOSS_OVER)
+        
+        if not mod:isAnyChallenge() then
+          mod:doRepentogonPostMegaSatan2Logic()
+        end
+        
+        Isaac.RunCallbackWithParam(ModCallbacks.MC_POST_NPC_DEATH, EntityType.ENTITY_MEGA_SATAN_2, entityNpc)
       end
-      
-      Isaac.RunCallbackWithParam(ModCallbacks.MC_POST_NPC_DEATH, EntityType.ENTITY_MEGA_SATAN_2, entityNpc)
+    end
+  elseif entityNpc.Type == EntityType.ENTITY_DELIRIUM then
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 then
+      if not game:HasHallucination() and room:GetFrameCount() % 600 == 0 then
+        game:ShowHallucination(math.random(10, 100), BackdropType.NUM_BACKDROPS) -- rng
+      end
+    end
+  else -- ENTITY_ULTRA_GREED
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
+      mod:doUltraGreedInNormalModeIntegration(entityNpc:GetSprite())
+    end
+  end
+end
+
+function mod:onPreSpawnAward(rng, pos)
+  if not game:IsGreedMode() then
+    return
+  end
+  
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  local stage = level:GetStage()
+  
+  if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
+    local centerIdx = room:GetGridIndex(room:GetCenterPos())
+    
+    mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
+    mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
+    mod:spawnDeliriumRoomPrizes(rng, centerIdx + (3 * room:GetGridWidth()))
+    
+    if not mod:isAnyChallenge() then
+      mod:doRepentogonPostDeliriumLogic()
+    end
+    
+    -- alt: just stop ultra greed sounds (427-440)
+    sfx:StopLoopingSounds()
+    
+    return true
+  end
+end
+
+function mod:onDeliriumTransform(delirium, t, v, force)
+  if game:IsGreedMode() then
+    local level = game:GetLevel()
+    local roomDesc = level:GetCurrentRoomDesc()
+    local stage = level:GetStage()
+    
+    -- don't transform into the ultra greed door
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and t == EntityType.ENTITY_ULTRA_DOOR then
+      return { EntityType.ENTITY_ULTRA_GREED, 0 }
+    end
+  end
+end
+
+function mod:onDeliriumPostTransform(delirium)
+  if game:IsGreedMode() then
+    local level = game:GetLevel()
+    local roomDesc = level:GetCurrentRoomDesc()
+    local stage = level:GetStage()
+    
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and delirium.BossType == EntityType.ENTITY_ULTRA_GREED then
+      mod:doUltraGreedInNormalModeIntegration(delirium:GetSprite())
     end
   end
 end
@@ -198,8 +272,39 @@ function mod:doRepentogonPostMegaSatan2Logic()
   end
 end
 
+function mod:doRepentogonPostDeliriumLogic()
+  if REPENTOGON then
+    local gameData = Isaac.GetPersistentGameData()
+    gameData:IncreaseEventCounter(EventCounter.DELIRIUM_KILLS, 1)
+    game:RecordPlayerCompletion(CompletionType.DELIRIUM)
+  end
+end
+
 function mod:spawnBigChest(pos)
   Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_BIGCHEST, 0, pos, Vector.Zero, nil)
+end
+
+function mod:spawnStairs(pos)
+  local room = game:GetRoom()
+  
+  local stairs = Isaac.GridSpawn(GridEntityType.GRID_STAIRS, 3, pos, true)
+  if stairs:GetType() ~= GridEntityType.GRID_STAIRS then
+    mod:removeGridEntity(room:GetGridIndex(pos), 0, false, true)
+    Isaac.GridSpawn(GridEntityType.GRID_STAIRS, 3, pos, true)
+  end
+end
+
+function mod:removeGridEntity(gridIdx, pathTrail, keepDecoration, update)
+  local room = game:GetRoom()
+  
+  if REPENTOGON then
+    room:RemoveGridEntityImmediate(gridIdx, pathTrail, keepDecoration)
+  else
+    room:RemoveGridEntity(gridIdx, pathTrail, keepDecoration)
+    if update then
+      room:Update()
+    end
+  end
 end
 
 function mod:spawnGreedDonationMachine(pos)
@@ -306,6 +411,89 @@ function mod:getDoorByTargetRoomIdx(idx)
   return nil
 end
 
+function mod:spawnDeliriumRoomPrizes(rng, gridIdx)
+  local room = game:GetRoom()
+  
+  local firstChoices = { Card.CARD_HUMANITY, Card.CARD_SOUL_KEEPER, Card.CARD_DIAMONDS_2, Card.CARD_ACE_OF_DIAMONDS, Card.CARD_JUSTICE, Card.CARD_REVERSE_FOOL, Card.CARD_REVERSE_STARS, Card.CARD_GET_OUT_OF_JAIL }
+  local firstChoice = firstChoices[rng:RandomInt(#firstChoices) + 1]
+  if firstChoice == Card.CARD_HUMANITY then
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_SOUL_KEEPER then
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_DIAMONDS_2 then
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_ACE_OF_DIAMONDS then
+    local secondChoices = { Card.CARD_HIEROPHANT, Card.CARD_LOVERS, Card.CARD_JUSTICE, Card.CARD_QUEEN_OF_HEARTS }
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, secondChoices[rng:RandomInt(#secondChoices) + 1], room:GetGridPosition(gridIdx + 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_JUSTICE then
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_REVERSE_JUSTICE, room:GetGridPosition(gridIdx + 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_REVERSE_FOOL then
+    local secondChoices = { Card.CARD_REVERSE_HERMIT, Card.CARD_ACE_OF_DIAMONDS }
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, secondChoices[rng:RandomInt(#secondChoices) + 1], room:GetGridPosition(gridIdx + 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_REVERSE_STARS then
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_REVERSE_HERMIT, room:GetGridPosition(gridIdx + 1), Vector.Zero, nil)
+  elseif firstChoice == Card.CARD_GET_OUT_OF_JAIL then
+    -- one last chance to open mega satan door
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, firstChoice, room:GetGridPosition(gridIdx - 1), Vector.Zero, nil)
+  end
+end
+
+function mod:spawnDeliriumRoom()
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  local rooms = level:GetRooms()
+  
+  for i = 0, #rooms - 1 do
+    local room = rooms:Get(i)
+    if room.Data.StageID == 0 and room.Data.Type == RoomType.ROOM_BOSS and room.Data.Variant == 3414 then
+      return
+    end
+  end
+  
+  if REPENTOGON then
+    -- this is a 1x1 room, prefer down if possible, up will already be taken
+    for _, v in ipairs({ DoorSlot.DOWN0, DoorSlot.RIGHT0, DoorSlot.LEFT0 }) do
+      if room:IsDoorSlotAllowed(v) and room:GetDoor(v) == nil then
+        local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 3414, -1)
+        if level:TryPlaceRoomAtDoor(data, roomDesc, v, 0, true, true) then
+          if MinimapAPI then -- normal map is fine, but minimapi needs a refresh
+            MinimapAPI:ClearMap()
+            MinimapAPI:LoadDefaultMap()
+          end
+          return
+        end
+      end
+    end
+  else
+    -- this is complete jank, putting a 2x2 room in a 1x1 space, but it works
+    for _, v in ipairs({ { slot = DoorSlot.DOWN0, add = 13 }, { slot = DoorSlot.RIGHT0, add = 1 }, { slot = DoorSlot.LEFT0, add = -1 } }) do
+      if room:IsDoorSlotAllowed(v.slot) and room:GetDoor(v.slot) == nil then
+        if level:MakeRedRoomDoor(roomDesc.GridIndex, v.slot) then
+          local redRoomDesc = level:GetRoomByIdx(roomDesc.GridIndex + v.add, -1)
+          redRoomDesc.Flags = redRoomDesc.Flags & ~RoomDescriptor.FLAG_RED_ROOM
+          
+          Isaac.ExecuteCommand('goto s.boss.3414')
+          local dbg = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX, -1)
+          redRoomDesc.Data = dbg.Data
+          
+          game:StartRoomTransition(roomDesc.GridIndex, Direction.NO_DIRECTION, RoomTransitionAnim.FADE, nil, -1)
+          
+          if MinimapAPI then
+            MinimapAPI:ClearMap()
+            MinimapAPI:LoadDefaultMap()
+          end
+          return
+        end
+      end
+    end
+  end
+end
+
 function mod:loadMegaSatanRoom()
   local level = game:GetLevel()
   local roomDesc = level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1)
@@ -330,6 +518,52 @@ function mod:loadMegaSatanRoom()
       roomDesc.DecorationSeed = dbg.DecorationSeed
       
       game:StartRoomTransition(roomIdx, Direction.NO_DIRECTION, RoomTransitionAnim.FADE, nil, -1)
+    end
+  end
+end
+
+function mod:doUniqueDeliriumBossDoorIntegration()
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  
+  for i = 0, DoorSlot.NUM_DOOR_SLOTS - 1 do
+    local door = room:GetDoor(i)
+    if door then
+      local targetRoomDesc = level:GetRoomByIdx(door.TargetRoomIndex, -1)
+      if (roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414) or
+         (targetRoomDesc.Data.StageID == 0 and targetRoomDesc.Data.Type == RoomType.ROOM_BOSS and targetRoomDesc.Data.Variant == 3414)
+      then
+        -- this fails gracefully if the anm2 file doesn't exist
+        local sprite = door:GetSprite()
+        sprite:Load('gfx/grid/door_bossdeliriumdoor.anm2', false) -- gfx/grid/Door_10_BossRoomDoor.anm2
+        sprite:Play('Close', false)
+        sprite:LoadGraphics()
+      end
+    end
+  end
+end
+
+function mod:doUltraGreedInNormalModeIntegration(sprite)
+  local pngUltraGreedBody = nil -- gfx/bosses/afterbirthplus/deliriumforms/afterbirth/boss_ultragreed_body.png
+  local pngUltraGreed = nil     -- gfx/bosses/afterbirthplus/deliriumforms/afterbirth/boss_ultragreed.png
+  
+  -- check for mods otherwise ReplaceSpritesheet will turn the entity invisible
+  if GreedInNormal then
+    pngUltraGreedBody = 'gfx/bosses/deliriumforms/boss_ultragreed_body.png'
+    pngUltraGreed = 'gfx/bosses/deliriumforms/boss_ultragreed.png'
+  elseif Isaac.GetEntityTypeByName('Deli Ultra Greed') > 0 then -- 420
+    pngUltraGreedBody = 'gfx/bosses/afterbirth/boss_fake_ultragreed_body.png'
+    pngUltraGreed = 'gfx/bosses/afterbirth/boss_fake_ultragreed.png'
+  end
+  
+  if pngUltraGreedBody and pngUltraGreed then
+    if sprite:GetFilename() == 'gfx/406.000_UltraGreed.anm2' then
+      sprite:ReplaceSpritesheet(0, pngUltraGreedBody)
+      for i = 1, 8 do
+        sprite:ReplaceSpritesheet(i, pngUltraGreed)
+      end
+      sprite:LoadGraphics()
     end
   end
 end
@@ -477,6 +711,14 @@ mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.onNewRoom)
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.onUpdate)
 mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, mod.onPickupInit, PickupVariant.PICKUP_BIGCHEST)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_MEGA_SATAN_2)
+mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_DELIRIUM)
+mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.onPreSpawnAward)
+if REPENTOGON then
+  mod:AddCallback(DeliriumCallbacks.TRANSFORMATION , mod.onDeliriumTransform)
+  mod:AddCallback(DeliriumCallbacks.POST_TRANSFORMATION , mod.onDeliriumPostTransform)
+else
+  mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_ULTRA_GREED)
+end
 
 mod:doStageApiOverride()
 mod:setupModConfigMenu()
