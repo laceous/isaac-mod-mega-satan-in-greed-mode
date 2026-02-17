@@ -101,12 +101,11 @@ function mod:onNewRoom()
     if stage == LevelStage.STAGE7_GREED then
       if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
         mod:spawnMegaSatanDoor()
-        
-        if level:GetRooms():Get(level:GetLastBossRoomListIndex()).Clear or level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1).Clear then
-          mod:spawnDeliriumRoom()
-        end
+        mod:spawnDeliriumRoom()
       elseif room:IsCurrentRoomLastBoss() and room:IsClear() then
         mod:spawnMegaSatanDoor()
+      elseif room:GetType() ~= RoomType.ROOM_BOSS and room:GetRoomShape() == RoomShape.ROOMSHAPE_1x1 and roomDesc.GridIndex >= 0 and currentDimension == 0 then
+        mod:spawnDeliriumRoom() -- fallback if red rooms took all door slots in starting room
       end
     end
   end
@@ -379,6 +378,17 @@ end
 function mod:spawnMegaSatanDoorNotTop()
   local room = game:GetRoom()
   
+  local hasDoorSlotAvail = false
+  for i = 0, DoorSlot.NUM_DOOR_SLOTS - 1 do
+    if room:IsDoorSlotAllowed(i) and room:GetDoor(i) == nil then
+      hasDoorSlotAvail = true
+      break
+    end
+  end
+  if not hasDoorSlotAvail then
+    return -- TrySpawnBlueWombDoor will overwrite doors if they already exist
+  end
+  
   -- usually left, but could be right or down (random)
   if room:TrySpawnBlueWombDoor(false, true, true) then -- TrySpawnBossRushDoor
     local door = mod:getDoorByTargetRoomIdx(GridRooms.ROOM_BLUE_WOOM_IDX)
@@ -477,9 +487,13 @@ function mod:spawnDeliriumRoom()
     end
   end
   
+  if not (rooms:Get(level:GetLastBossRoomListIndex()).Clear or level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1).Clear) then
+    return
+  end
+  
   if REPENTOGON then
-    -- this is a 1x1 room, prefer down if possible, up will already be taken
-    for _, v in ipairs({ DoorSlot.DOWN0, DoorSlot.RIGHT0, DoorSlot.LEFT0 }) do
+    -- this is a 1x1 room, prefer down if possible
+    for _, v in ipairs({ DoorSlot.DOWN0, DoorSlot.RIGHT0, DoorSlot.LEFT0, DoorSlot.UP0 }) do
       if room:IsDoorSlotAllowed(v) and room:GetDoor(v) == nil then
         local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 3414, -1)
         if level:TryPlaceRoomAtDoor(data, roomDesc, v, 0, true, true) then
@@ -493,7 +507,7 @@ function mod:spawnDeliriumRoom()
     end
   else
     -- this is complete jank, putting a 2x2 room in a 1x1 space, but it works
-    for _, v in ipairs({ { slot = DoorSlot.DOWN0, add = 13 }, { slot = DoorSlot.RIGHT0, add = 1 }, { slot = DoorSlot.LEFT0, add = -1 } }) do
+    for _, v in ipairs({ { slot = DoorSlot.DOWN0, add = 13 }, { slot = DoorSlot.RIGHT0, add = 1 }, { slot = DoorSlot.LEFT0, add = -1 }, { slot = DoorSlot.UP0, add = -13 } }) do
       if room:IsDoorSlotAllowed(v.slot) and room:GetDoor(v.slot) == nil then
         if level:MakeRedRoomDoor(roomDesc.GridIndex, v.slot) then
           local redRoomDesc = level:GetRoomByIdx(roomDesc.GridIndex + v.add, -1)
@@ -735,7 +749,7 @@ function mod:setupModConfigMenu()
         return mod.state.allowDeliriumUltraGreedAppear
       end,
       Display = function()
-        return (mod.state.allowDeliriumUltraGreedAppear and 'Allow' or 'Do not allow') .. ' ultra greed appear'
+        return (mod.state.allowDeliriumUltraGreedAppear and 'Allow' or 'Do not allow') .. ' ultra greed appear animation'
       end,
       OnChange = function(b)
         mod.state.allowDeliriumUltraGreedAppear = b
