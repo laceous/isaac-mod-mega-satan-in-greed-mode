@@ -207,6 +207,10 @@ function mod:onNpcUpdate(entityNpc)
   else -- ENTITY_ULTRA_GREED
     if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
       mod:doUltraGreedInNormalModeIntegration(entityNpc:GetSprite())
+      
+      if entityNpc.State == NpcState.STATE_APPEAR_CUSTOM then
+        entityNpc.State = 510 -- spin
+      end
     end
   end
 end
@@ -260,6 +264,9 @@ function mod:onDeliriumPostTransform(delirium)
     
     if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and delirium.BossType == EntityType.ENTITY_ULTRA_GREED then
       mod:doUltraGreedInNormalModeIntegration(delirium:GetSprite())
+      
+      -- spin rather than appear so the camera doesn't move away from the player
+      delirium.State = 510
     end
   end
 end
