@@ -12,6 +12,8 @@ mod.state = {}
 mod.state.megaSatanDoorOpened = false -- applies to the last floor so no danger of returning to the floor with glowing hourglass
 mod.state.applyToChallenges = false
 mod.state.spawnMegaSatanDoorEarly = false
+mod.state.allowDeliriumUltraGreedAppear = false
+mod.state.spawnFoolCard = false
 
 function mod:onGameStart(isContinue)
   if mod:HasData() then
@@ -21,7 +23,7 @@ function mod:onGameStart(isContinue)
       if isContinue and type(state.megaSatanDoorOpened) == 'boolean' then
         mod.state.megaSatanDoorOpened = state.megaSatanDoorOpened
       end
-      for _, v in ipairs({ 'applyToChallenges', 'spawnMegaSatanDoorEarly' }) do
+      for _, v in ipairs({ 'applyToChallenges', 'spawnMegaSatanDoorEarly', 'allowDeliriumUltraGreedAppear', 'spawnFoolCard' }) do
         if type(state[v]) == 'boolean' then
           mod.state[v] = state[v]
         end
@@ -60,6 +62,8 @@ function mod:save(settingsOnly)
     
     state.applyToChallenges = mod.state.applyToChallenges
     state.spawnMegaSatanDoorEarly = mod.state.spawnMegaSatanDoorEarly
+    state.allowDeliriumUltraGreedAppear = mod.state.allowDeliriumUltraGreedAppear
+    state.spawnFoolCard = mod.state.spawnFoolCard
     
     mod:SaveData(json.encode(state))
   else
@@ -151,7 +155,12 @@ function mod:onPickupInit(pickup)
   
   if stage == LevelStage.STAGE7_GREED and room:IsCurrentRoomLastBoss() then
     mod:spawnMegaSatanDoor()
-    if game.Difficulty == Difficulty.DIFFICULTY_GREEDIER then
+    
+    if game.Difficulty == Difficulty.DIFFICULTY_GREED then
+      if mod.state.spawnFoolCard and room:GetFrameCount() > 0 then
+        mod:spawnFoolCard(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
+      end
+    else -- DIFFICULTY_GREEDIER
       mod:spawnStairs(room:GetGridPosition(room:GetGridIndex(pickup.Position) + (1 * room:GetGridWidth())))
     end
   end
@@ -208,7 +217,7 @@ function mod:onNpcUpdate(entityNpc)
     if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
       mod:doUltraGreedInNormalModeIntegration(entityNpc:GetSprite())
       
-      if entityNpc.State == NpcState.STATE_APPEAR_CUSTOM then
+      if not mod.state.allowDeliriumUltraGreedAppear and entityNpc.State == NpcState.STATE_APPEAR_CUSTOM then
         entityNpc.State = 510 -- spin
       end
     end
@@ -266,7 +275,9 @@ function mod:onDeliriumPostTransform(delirium)
       mod:doUltraGreedInNormalModeIntegration(delirium:GetSprite())
       
       -- spin rather than appear so the camera doesn't move away from the player
-      delirium.State = 510
+      if not mod.state.allowDeliriumUltraGreedAppear then
+        delirium.State = 510
+      end
     end
   end
 end
@@ -321,6 +332,10 @@ end
 
 function mod:spawnGoldenPenny(pos)
   Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COIN, CoinSubType.COIN_GOLDEN, pos, Vector.Zero, nil)
+end
+
+function mod:spawnFoolCard(pos)
+  Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, pos, Vector.Zero, nil)
 end
 
 function mod:spawnMegaSatanDoor()
@@ -707,6 +722,46 @@ function mod:setupModConfigMenu()
         mod:save(true)
       end,
       Info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' }
+    }
+  )
+  ModConfigMenu.AddSpace(category, 'Settings')
+  ModConfigMenu.AddTitle(category, 'Settings', 'Delirium')
+  ModConfigMenu.AddSetting(
+    category,
+    'Settings',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return mod.state.allowDeliriumUltraGreedAppear
+      end,
+      Display = function()
+        return (mod.state.allowDeliriumUltraGreedAppear and 'Allow' or 'Do not allow') .. ' ultra greed appear'
+      end,
+      OnChange = function(b)
+        mod.state.allowDeliriumUltraGreedAppear = b
+        mod:save(true)
+      end,
+      Info = { 'Ultra greed\'s appear animation hijacks the camera', 'This might be ok if you\'re zoomed out' }
+    }
+  )
+  ModConfigMenu.AddSpace(category, 'Settings')
+  ModConfigMenu.AddTitle(category, 'Settings', 'Ultra Greed')
+  ModConfigMenu.AddSetting(
+    category,
+    'Settings',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return mod.state.spawnFoolCard
+      end,
+      Display = function()
+        return (mod.state.spawnFoolCard and 'Spawn' or 'Do not spawn') .. ' fool card'
+      end,
+      OnChange = function(b)
+        mod.state.spawnFoolCard = b
+        mod:save(true)
+      end,
+      Info = { 'Spawn 0 - The Fool after defeating ultra greed?', 'Only applies to greed mode (not greedier)' }
     }
   )
 end
