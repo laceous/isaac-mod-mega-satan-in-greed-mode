@@ -98,14 +98,14 @@ function mod:onNewRoom()
   end
   
   if not (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
-    if stage == LevelStage.STAGE7_GREED then
-      if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() and currentDimension == 0 then
+    if stage == LevelStage.STAGE7_GREED and currentDimension == 0 then
+      if level:GetCurrentRoomIndex() == level:GetStartingRoomIndex() then
         mod:spawnMegaSatanDoor()
         mod:spawnDeliriumRoom()
       elseif room:IsCurrentRoomLastBoss() and room:IsClear() then
         mod:spawnMegaSatanDoor()
-      elseif room:GetType() ~= RoomType.ROOM_BOSS and room:GetRoomShape() == RoomShape.ROOMSHAPE_1x1 and roomDesc.GridIndex >= 0 and currentDimension == 0 then
-        mod:spawnDeliriumRoom() -- fallback if red rooms took all door slots in starting room
+      elseif room:GetType() ~= RoomType.ROOM_BOSS and room:GetRoomShape() == RoomShape.ROOMSHAPE_1x1 and roomDesc.GridIndex >= 0 then
+        mod:spawnDeliriumRoom() -- fallback if red rooms took all the door slots in the starting room
       end
     end
   end
@@ -480,15 +480,15 @@ function mod:spawnDeliriumRoom()
   local roomDesc = level:GetCurrentRoomDesc()
   local rooms = level:GetRooms()
   
+  if not (rooms:Get(level:GetLastBossRoomListIndex()).Clear or level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1).Clear) then
+    return
+  end
+  
   for i = 0, #rooms - 1 do
     local room = rooms:Get(i)
     if room.Data.StageID == 0 and room.Data.Type == RoomType.ROOM_BOSS and room.Data.Variant == 3414 then
       return
     end
-  end
-  
-  if not (rooms:Get(level:GetLastBossRoomListIndex()).Clear or level:GetRoomByIdx(GridRooms.ROOM_MEGA_SATAN_IDX, -1).Clear) then
-    return
   end
   
   if REPENTOGON then
@@ -593,14 +593,12 @@ function mod:doUltraGreedInNormalModeIntegration(sprite)
     pngUltraGreed = 'gfx/bosses/afterbirth/boss_fake_ultragreed.png'
   end
   
-  if pngUltraGreedBody and pngUltraGreed then
-    if sprite:GetFilename() == 'gfx/406.000_UltraGreed.anm2' then
-      sprite:ReplaceSpritesheet(0, pngUltraGreedBody)
-      for i = 1, 8 do
-        sprite:ReplaceSpritesheet(i, pngUltraGreed)
-      end
-      sprite:LoadGraphics()
+  if pngUltraGreedBody and pngUltraGreed and sprite:GetFilename() == 'gfx/406.000_UltraGreed.anm2' then
+    sprite:ReplaceSpritesheet(0, pngUltraGreedBody)
+    for i = 1, 8 do
+      sprite:ReplaceSpritesheet(i, pngUltraGreed)
     end
+    sprite:LoadGraphics()
   end
 end
 
