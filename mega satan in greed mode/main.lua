@@ -131,7 +131,6 @@ function mod:onUpdate()
   end
   
   local level = game:GetLevel()
-  local room = level:GetCurrentRoom()
   local stage = level:GetStage()
   
   if stage == LevelStage.STAGE7_GREED then
