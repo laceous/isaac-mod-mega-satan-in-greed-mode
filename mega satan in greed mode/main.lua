@@ -592,7 +592,7 @@ function mod:doUltraGreedInNormalModeIntegration(sprite)
     pngUltraGreed = 'gfx/bosses/afterbirth/boss_fake_ultragreed.png'
   end
   
-  if pngUltraGreedBody and pngUltraGreed and sprite:GetFilename() == 'gfx/406.000_UltraGreed.anm2' then
+  if pngUltraGreedBody and pngUltraGreed and string.lower(sprite:GetFilename()) == 'gfx/406.000_ultragreed.anm2' then
     sprite:ReplaceSpritesheet(0, pngUltraGreedBody)
     for i = 1, 8 do
       sprite:ReplaceSpritesheet(i, pngUltraGreed)
