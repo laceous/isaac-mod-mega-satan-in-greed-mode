@@ -8,6 +8,11 @@ mod.onGameStartHasRun = false
 mod.triggerMegaSatanDoorSpawn = false
 mod.megaSatan2DeathAnimLastFrame = 129 -- default
 
+if REPENTOGON then
+  mod.sprite = Sprite()
+  mod.font = Font()
+end
+
 mod.state = {}
 mod.state.megaSatanDoorOpened = false -- applies to the last floor so no danger of returning to the floor with glowing hourglass
 mod.state.applyToChallenges = false
@@ -250,6 +255,58 @@ function mod:onPreSpawnAward(rng, pos)
   end
 end
 
+function mod:onRender()
+  local hud = game:GetHUD()
+  local seeds = game:GetSeeds()
+  
+  if not game:IsGreedMode() or not hud:IsVisible() or seeds:HasSeedEffect(SeedEffect.SEED_NO_HUD) then
+    return
+  end
+  
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  local stage = level:GetStage()
+  
+  if stage == LevelStage.STAGE7_GREED and room:GetType() == RoomType.ROOM_BOSS and room:IsClear() then
+    if roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX or
+       (roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Variant == 3414)
+    then
+      if not mod.sprite:IsLoaded() then
+        mod.sprite:Load('gfx/ui/hudpickups.anm2', true)
+      end
+      if not mod.font:IsLoaded() then
+        mod.font:Load('font/pftempestasevencondensed.fnt')
+      end
+      
+      local coords = Vector(19, 72)
+      if REPENTANCE_PLUS then
+        coords = coords + Vector(0, 2)
+      end
+      if game:AchievementUnlocksDisallowed() then -- rgon
+        coords = coords + Vector(13, 0)
+      end
+      coords = coords + game.ScreenShakeOffset + (Options.HUDOffset * Vector(20, 12))
+      
+      -- https://bindingofisaacrebirth.wiki.gg/wiki/Greed_Donation_Machine#Jam_Chance
+      local percent = nil
+      local coins = mod:getCoinsDonated(game:GetPlayer(0):GetPlayerType())
+      if coins then
+        percent = math.floor(0.2 * math.min(100, math.exp(0.023 * coins) - 1) + 0.5)
+        if game.Difficulty == Difficulty.DIFFICULTY_GREEDIER then
+          percent = math.min(1, percent)
+        end
+      end
+      
+      if percent then
+        mod.sprite:SetFrame('Idle', 9)
+        mod.sprite:Render(coords)
+        mod.font:DrawString(percent .. '%', coords.X + 16, coords.Y, KColor.White, 0, false)
+      end
+    end
+  end
+end
+
 function mod:onDeliriumTransform(delirium, t, v, force)
   if game:IsGreedMode() then
     local level = game:GetLevel()
@@ -278,6 +335,61 @@ function mod:onDeliriumPostTransform(delirium)
       end
     end
   end
+end
+
+-- rgon supports counts for modded players, it's not currently exposed in the api, we can't assume 100% like in vanilla
+function mod:getCoinsDonated(playerType)
+  if REPENTOGON then
+    local tbl = {
+      [PlayerType.PLAYER_ISAAC] = EventCounter.GREED_MODE_COINS_DONATED_WITH_ISAAC,
+      [PlayerType.PLAYER_MAGDALENE] = EventCounter.GREED_MODE_COINS_DONATED_WITH_MAGDALENE,
+      [PlayerType.PLAYER_CAIN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_CAIN,
+      [PlayerType.PLAYER_JUDAS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JUDAS,
+      [PlayerType.PLAYER_BLACKJUDAS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JUDAS,
+      [PlayerType.PLAYER_BLUEBABY] = EventCounter.GREED_MODE_COINS_DONATED_WITH_BLUE,
+      [PlayerType.PLAYER_EVE] = EventCounter.GREED_MODE_COINS_DONATED_WITH_EVE,
+      [PlayerType.PLAYER_SAMSON] = EventCounter.GREED_MODE_COINS_DONATED_WITH_SAMSON,
+      [PlayerType.PLAYER_AZAZEL] = EventCounter.GREED_MODE_COINS_DONATED_WITH_AZAZEL,
+      [PlayerType.PLAYER_LAZARUS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LAZARUS,
+      [PlayerType.PLAYER_LAZARUS2] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LAZARUS,
+      [PlayerType.PLAYER_EDEN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_EDEN,
+      [PlayerType.PLAYER_THELOST] = EventCounter.GREED_MODE_COINS_DONATED_WITH_THE_LOST,
+      [PlayerType.PLAYER_LILITH] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LILITH,
+      [PlayerType.PLAYER_KEEPER] = EventCounter.GREED_MODE_COINS_DONATED_WITH_KEEPER,
+      [PlayerType.PLAYER_APOLLYON] = EventCounter.GREED_MODE_COINS_DONATED_WITH_APOLLYON,
+      [PlayerType.PLAYER_THEFORGOTTEN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_FORGOTTEN,
+      [PlayerType.PLAYER_THESOUL] = EventCounter.GREED_MODE_COINS_DONATED_WITH_FORGOTTEN,
+      [PlayerType.PLAYER_BETHANY] = EventCounter.GREED_MODE_COINS_DONATED_WITH_BETHANY,
+      [PlayerType.PLAYER_JACOB] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JACOB_AND_ESAU,
+      [PlayerType.PLAYER_ESAU] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JACOB_AND_ESAU,
+      [PlayerType.PLAYER_ISAAC_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_ISAAC,
+      [PlayerType.PLAYER_MAGDALENE_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_MAGDALENE,
+      [PlayerType.PLAYER_CAIN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_CAIN,
+      [PlayerType.PLAYER_JUDAS_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JUDAS,
+      [PlayerType.PLAYER_BLUEBABY_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_BLUE_BABY,
+      [PlayerType.PLAYER_EVE_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_EVE,
+      [PlayerType.PLAYER_SAMSON_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_SAMSON,
+      [PlayerType.PLAYER_AZAZEL_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_AZAZEL,
+      [PlayerType.PLAYER_LAZARUS_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LAZARUS,
+      [PlayerType.PLAYER_LAZARUS2_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LAZARUS,
+      [PlayerType.PLAYER_EDEN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_EDEN,
+      [PlayerType.PLAYER_THELOST_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_LOST,
+      [PlayerType.PLAYER_LILITH_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LILITH,
+      [PlayerType.PLAYER_KEEPER_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_KEEPER,
+      [PlayerType.PLAYER_APOLLYON_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_APOLLYON,
+      [PlayerType.PLAYER_THEFORGOTTEN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_FORGOTTEN,
+      [PlayerType.PLAYER_THESOUL_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_FORGOTTEN,
+      [PlayerType.PLAYER_BETHANY_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_BETHANY,
+      [PlayerType.PLAYER_JACOB_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JACOB_AND_ESAU,
+      [PlayerType.PLAYER_JACOB2_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JACOB_AND_ESAU,
+    }
+    local counter = tbl[playerType]
+    if counter then
+      local gameData = Isaac.GetPersistentGameData()
+      return gameData:GetEventCounter(counter)
+    end
+  end
+  return nil
 end
 
 function mod:doRepentogonPostMegaSatan2Logic()
@@ -695,86 +807,39 @@ function mod:setupModConfigMenu()
   for _, v in ipairs({ 'Settings' }) do
     ModConfigMenu.RemoveSubcategory(category, v)
   end
-  ModConfigMenu.AddSetting(
-    category,
-    'Settings',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return mod.state.applyToChallenges
-      end,
-      Display = function()
-        return (mod.state.applyToChallenges and 'Apply' or 'Do not apply') .. ' to challenges'
-      end,
-      OnChange = function(b)
-        mod.state.applyToChallenges = b
-        mod.triggerMegaSatanDoorSpawn = true
-        mod:save(true)
-      end,
-      Info = { 'Should the settings below', 'be applied to challenges?' }
-    }
-  )
-  ModConfigMenu.AddSpace(category, 'Settings')
-  ModConfigMenu.AddTitle(category, 'Settings', 'Mega Satan')
-  ModConfigMenu.AddSetting(
-    category,
-    'Settings',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return mod.state.spawnMegaSatanDoorEarly
-      end,
-      Display = function()
-        return 'Spawn door ' .. (mod.state.spawnMegaSatanDoorEarly and 'before' or 'after') .. ' ultra greed'
-      end,
-      OnChange = function(b)
-        mod.state.spawnMegaSatanDoorEarly = b
-        mod.triggerMegaSatanDoorSpawn = true
-        mod:save(true)
-      end,
-      Info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' }
-    }
-  )
-  ModConfigMenu.AddSpace(category, 'Settings')
-  ModConfigMenu.AddTitle(category, 'Settings', 'Delirium')
-  ModConfigMenu.AddSetting(
-    category,
-    'Settings',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return mod.state.allowDeliriumUltraGreedAppear
-      end,
-      Display = function()
-        return (mod.state.allowDeliriumUltraGreedAppear and 'Allow' or 'Do not allow') .. ' ultra greed appear animation'
-      end,
-      OnChange = function(b)
-        mod.state.allowDeliriumUltraGreedAppear = b
-        mod:save(true)
-      end,
-      Info = { 'Ultra greed\'s appear animation hijacks the camera', 'This might be ok if you\'re zoomed out' }
-    }
-  )
-  ModConfigMenu.AddSpace(category, 'Settings')
-  ModConfigMenu.AddTitle(category, 'Settings', 'Ultra Greed')
-  ModConfigMenu.AddSetting(
-    category,
-    'Settings',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return mod.state.spawnFoolCard
-      end,
-      Display = function()
-        return (mod.state.spawnFoolCard and 'Spawn' or 'Do not spawn') .. ' fool card'
-      end,
-      OnChange = function(b)
-        mod.state.spawnFoolCard = b
-        mod:save(true)
-      end,
-      Info = { 'Spawn 0 - The Fool after defeating ultra greed?', 'Only applies to greed mode (not greedier)' }
-    }
-  )
+  for _, v in ipairs({
+                      { title = nil          , field = 'applyToChallenges'            , txtTrue = 'Apply to challenges'               , txtFalse = 'Do not apply to challenges'               , trigger = true , info = { 'Should the settings below', 'be applied to challenges?' } },
+                      { title = 'Mega Satan' , field = 'spawnMegaSatanDoorEarly'      , txtTrue = 'Spawn door before ultra greed'     , txtFalse = 'Spawn door after ultra greed'             , trigger = true , info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' } },
+                      { title = 'Delirium'   , field = 'allowDeliriumUltraGreedAppear', txtTrue = 'Allow ultra greed appear animation', txtFalse = 'Do not allow ultra greed appear animation', trigger = false, info = { 'Ultra greed\'s appear animation hijacks the camera', 'This might be ok if you\'re zoomed out' } },
+                      { title = 'Ultra Greed', field = 'spawnFoolCard'                , txtTrue = 'Spawn fool card'                   , txtFalse = 'Do not spawn fool card'                   , trigger = false, info = { 'Spawn 0 - The Fool after defeating ultra greed?', 'Only applies to greed mode (not greedier)' } },
+                    })
+  do
+    if v.title then
+      ModConfigMenu.AddSpace(category, 'Settings')
+      ModConfigMenu.AddTitle(category, 'Settings', v.title)
+    end
+    ModConfigMenu.AddSetting(
+      category,
+      'Settings',
+      {
+        Type = ModConfigMenu.OptionType.BOOLEAN,
+        CurrentSetting = function()
+          return mod.state[v.field]
+        end,
+        Display = function()
+          return mod.state[v.field] and v.txtTrue or v.txtFalse
+        end,
+        OnChange = function(b)
+          mod.state[v.field] = b
+          if v.trigger then
+            mod.triggerMegaSatanDoorSpawn = true
+          end
+          mod:save(true)
+        end,
+        Info = v.info
+      }
+    )
+  end
 end
 -- end ModConfigMenu --
 
@@ -787,6 +852,7 @@ mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_M
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_DELIRIUM)
 mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.onPreSpawnAward)
 if REPENTOGON then
+  mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
   mod:AddCallback(DeliriumCallbacks.TRANSFORMATION , mod.onDeliriumTransform)
   mod:AddCallback(DeliriumCallbacks.POST_TRANSFORMATION , mod.onDeliriumPostTransform)
 else
