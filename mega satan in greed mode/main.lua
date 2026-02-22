@@ -154,17 +154,22 @@ function mod:onPickupInit(pickup)
   
   local level = game:GetLevel()
   local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
   local stage = level:GetStage()
   
-  if stage == LevelStage.STAGE7_GREED and room:IsCurrentRoomLastBoss() then
-    mod:spawnMegaSatanDoor()
-    
-    if game.Difficulty == Difficulty.DIFFICULTY_GREED then
-      if mod.state.spawnFoolCard and room:GetFrameCount() > 0 then
-        mod:spawnFoolCard(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
+  if stage == LevelStage.STAGE7_GREED then
+    if room:IsCurrentRoomLastBoss() then
+      mod:spawnMegaSatanDoor()
+      
+      if game.Difficulty == Difficulty.DIFFICULTY_GREED then
+        if mod.state.spawnFoolCard and room:GetFrameCount() > 0 then
+          mod:spawnFoolCard(Isaac.GetFreeNearPosition(Isaac.GetRandomPosition(), 3))
+        end
+      else -- DIFFICULTY_GREEDIER
+        mod:spawnStairs(room:GetGridPosition(room:GetGridIndex(pickup.Position) + (1 * room:GetGridWidth())))
       end
-    else -- DIFFICULTY_GREEDIER
-      mod:spawnStairs(room:GetGridPosition(room:GetGridIndex(pickup.Position) + (1 * room:GetGridWidth())))
+    elseif roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
+      mod:doUniqueDeliriumEndingChestIntegration(pickup:GetSprite())
     end
   end
 end
@@ -218,6 +223,7 @@ function mod:onNpcUpdate(entityNpc)
     end
   else -- ENTITY_ULTRA_GREED
     if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
+      -- this has to happen in update rather than init because it's part of delirium
       mod:doUltraGreedInNormalModeIntegration(entityNpc:GetSprite())
       
       if not mod.state.allowDeliriumUltraGreedAppear and entityNpc.State == NpcState.STATE_APPEAR_CUSTOM then
@@ -596,8 +602,8 @@ function mod:spawnDeliriumRoom()
   end
   
   for i = 0, #rooms - 1 do
-    local room = rooms:Get(i)
-    if room.Data.StageID == 0 and room.Data.Type == RoomType.ROOM_BOSS and room.Data.Variant == 3414 then
+    local r = rooms:Get(i)
+    if r.Data.StageID == 0 and r.Data.Type == RoomType.ROOM_BOSS and r.Data.Variant == 3414 then
       return
     end
   end
@@ -687,6 +693,18 @@ function mod:doUniqueDeliriumBossDoorIntegration()
         sprite:Play('Close', false)
         sprite:LoadGraphics()
       end
+    end
+  end
+end
+
+function mod:doUniqueDeliriumEndingChestIntegration(sprite)
+  if REPENTOGON then
+    -- have to use rgon here to see if this mod is loaded
+    local entry = XMLData.GetEntryByName(XMLNode.MOD, 'unique_delirium_ending_chest')
+    if entry and entry.enabled == 'true' and string.lower(sprite:GetFilename()) == 'gfx/005.340_big chest.anm2' then
+      sprite:ReplaceSpritesheet(0, 'gfx/items/pick ups/pickup_delirium_chest.png')
+      sprite:ReplaceSpritesheet(2, 'gfx/items/pick ups/pickup_delirium_chest.png')
+      sprite:LoadGraphics()
     end
   end
 end
