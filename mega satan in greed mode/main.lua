@@ -216,9 +216,13 @@ function mod:onNpcUpdate(entityNpc)
       end
     end
   elseif entityNpc.Type == EntityType.ENTITY_DELIRIUM then
-    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 then
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Type == RoomType.ROOM_BOSS and roomDesc.Data.Variant == 3414 then
       if not game:HasHallucination() and room:GetFrameCount() % 600 == 0 then
         game:ShowHallucination(math.random(10, 100), BackdropType.NUM_BACKDROPS) -- rng
+      end
+      
+      if string.lower(entityNpc:GetSprite():GetFilename()) ~= 'gfx/406.000_ultragreed.anm2' then
+        mod:stopUltraGreedSounds()
       end
     end
   else -- ENTITY_ULTRA_GREED
@@ -249,13 +253,11 @@ function mod:onPreSpawnAward(rng, pos)
     mod:spawnBigChest(REPENTANCE_PLUS and room:GetCenterPos() or room:GetGridPosition(centerIdx))
     mod:spawnGreedDonationMachine(room:GetGridPosition(centerIdx + (2 * room:GetGridWidth())))
     mod:spawnDeliriumRoomPrizes(rng, centerIdx + (3 * room:GetGridWidth()))
+    mod:stopUltraGreedSounds()
     
     if not mod:isAnyChallenge() then
       mod:doRepentogonPostDeliriumLogic()
     end
-    
-    -- alt: just stop ultra greed sounds (427-440)
-    sfx:StopLoopingSounds()
     
     return true
   end
@@ -332,13 +334,26 @@ function mod:onDeliriumPostTransform(delirium)
     local roomDesc = level:GetCurrentRoomDesc()
     local stage = level:GetStage()
     
-    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 and delirium.BossType == EntityType.ENTITY_ULTRA_GREED then
-      mod:doUltraGreedInNormalModeIntegration(delirium:GetSprite())
-      
-      -- spin rather than appear so the camera doesn't move away from the player
-      if not mod.state.allowDeliriumUltraGreedAppear then
-        delirium.State = 510
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex >= 0 then
+      if delirium.BossType == EntityType.ENTITY_ULTRA_GREED then
+        mod:doUltraGreedInNormalModeIntegration(delirium:GetSprite())
+        
+        -- spin rather than appear so the camera doesn't move away from the player
+        if not mod.state.allowDeliriumUltraGreedAppear then
+          delirium.State = 510
+        end
+      else
+        mod:stopUltraGreedSounds()
       end
+    end
+  end
+end
+
+function mod:stopUltraGreedSounds()
+  -- sfx:StopLoopingSounds()
+  for i = SoundEffect.SOUND_ULTRA_GREED_COIN_DESTROY, SoundEffect.SOUND_ULTRA_GREED_SPINNING do -- 427-440
+    if sfx:IsPlaying(i) then
+      sfx:Stop(i)
     end
   end
 end
