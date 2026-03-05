@@ -7,11 +7,8 @@ local game = Game()
 mod.onGameStartHasRun = false
 mod.triggerMegaSatanDoorSpawn = false
 mod.megaSatan2DeathAnimLastFrame = 129 -- default
-
-if REPENTOGON then
-  mod.sprite = Sprite()
-  mod.font = Font()
-end
+mod.sprite = Sprite()
+mod.font = Font()
 
 mod.state = {}
 mod.state.megaSatanDoorOpened = false -- applies to the last floor so no danger of returning to the floor with glowing hourglass
@@ -146,6 +143,81 @@ function mod:onUpdate()
   end
 end
 
+function mod:onRender()
+  local hud = game:GetHUD()
+  local seeds = game:GetSeeds()
+  
+  if not game:IsGreedMode() or not hud:IsVisible() or seeds:HasSeedEffect(SeedEffect.SEED_NO_HUD) then
+    return
+  end
+  
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  local stage = level:GetStage()
+  
+  if stage == LevelStage.STAGE7_GREED and room:GetType() == RoomType.ROOM_BOSS and room:IsClear() then
+    if roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX or
+       (roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Variant == 3414)
+    then
+      if not mod.sprite:IsLoaded() then
+        mod.sprite:Load('gfx/ui/hudpickups.anm2', true)
+      end
+      if not mod.font:IsLoaded() then
+        mod.font:Load('font/pftempestasevencondensed.fnt')
+      end
+      
+      local coords = Vector(19, 72)
+      if REPENTANCE_PLUS then
+        coords = coords + Vector(0, 2)
+      end
+      if REPENTOGON then
+        if game:AchievementUnlocksDisallowed() then
+          coords = coords + Vector(13, 0)
+        end
+      else
+        if seeds:IsCustomRun() or                                            -- challenge or seeded run
+           Isaac.GetChallenge() ~= Challenge.CHALLENGE_NULL or               -- secondary challenge check
+           seeds:HasSeedEffect(SeedEffect.SEED_INFINITE_BASEMENT) or         -- infinite basements
+           seeds:HasSeedEffect(SeedEffect.SEED_PICKUPS_SLIDE) or             -- tricky pickups
+           seeds:HasSeedEffect(SeedEffect.SEED_ITEMS_COST_MONEY) or          -- f2p version
+           seeds:HasSeedEffect(SeedEffect.SEED_PACIFIST) or                  -- pacifism
+           seeds:HasSeedEffect(SeedEffect.SEED_ENEMIES_RESPAWN) or           -- enemies respawn
+           seeds:HasSeedEffect(SeedEffect.SEED_POOP_TRAIL) or                -- poopy trail
+           seeds:HasSeedEffect(SeedEffect.SEED_INVINCIBLE) or                -- dog mode
+           seeds:HasSeedEffect(SeedEffect.SEED_KIDS_MODE) or                 -- kids' co-op mode
+           seeds:HasSeedEffect(SeedEffect.SEED_PERMANENT_CURSE_LABYRINTH) or -- inescapable labyrinth
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_DARKNESS) or    -- illuminate darkness
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_LABYRINTH) or   -- escape the labyrinth
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_LOST) or        -- i once was lost
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_UNKNOWN) or     -- know the unknown
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_MAZE) or        -- stay out of the maze
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_CURSE_BLIND) or       -- heal the blind
+           seeds:HasSeedEffect(SeedEffect.SEED_PREVENT_ALL_CURSES) or        -- total curse immunity
+           seeds:HasSeedEffect(SeedEffect.SEED_GLOWING_TEARS) or             -- glowing tears
+           seeds:HasSeedEffect(SeedEffect.SEED_ALL_CHAMPIONS) or             -- champion enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_ALWAYS_CHARMED) or            -- charmed enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_ALWAYS_CONFUSED) or           -- confused enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_ALWAYS_AFRAID) or             -- scaredy enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_ALWAYS_ALTERNATING_FEAR) or   -- skittish enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_ALWAYS_CHARMED_AND_AFRAID) or -- asocial enemies
+           seeds:HasSeedEffect(SeedEffect.SEED_SUPER_HOT) or                 -- super hot
+           seeds:HasSeedEffect(SeedEffect.SEED_G_FUEL) or                    -- g fuel!
+           not mod:hasMomBeenDefeated()                                      -- has mom been defeated?
+        then
+          coords = coords + Vector(13, 0)
+        end
+      end
+      coords = coords + game.ScreenShakeOffset + (Options.HUDOffset * Vector(20, 12))
+      
+      local percent = math.ceil(game:GetPlayer(0):GetGreedDonationBreakChance())
+      mod.sprite:SetFrame('Idle', 9)
+      mod.sprite:Render(coords)
+      mod.font:DrawString(percent .. '%', coords.X + 16, coords.Y, KColor.White, 0, false)
+    end
+  end
+end
+
 -- filtered to PICKUP_BIGCHEST
 function mod:onPickupInit(pickup)
   if not game:IsGreedMode() or (not mod.state.applyToChallenges and mod:isAnyChallenge()) then
@@ -263,58 +335,6 @@ function mod:onPreSpawnAward(rng, pos)
   end
 end
 
-function mod:onRender()
-  local hud = game:GetHUD()
-  local seeds = game:GetSeeds()
-  
-  if not game:IsGreedMode() or not hud:IsVisible() or seeds:HasSeedEffect(SeedEffect.SEED_NO_HUD) then
-    return
-  end
-  
-  local level = game:GetLevel()
-  local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
-  local stage = level:GetStage()
-  
-  if stage == LevelStage.STAGE7_GREED and room:GetType() == RoomType.ROOM_BOSS and room:IsClear() then
-    if roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX or
-       (roomDesc.GridIndex >= 0 and roomDesc.Data.StageID == 0 and roomDesc.Data.Variant == 3414)
-    then
-      if not mod.sprite:IsLoaded() then
-        mod.sprite:Load('gfx/ui/hudpickups.anm2', true)
-      end
-      if not mod.font:IsLoaded() then
-        mod.font:Load('font/pftempestasevencondensed.fnt')
-      end
-      
-      local coords = Vector(19, 72)
-      if REPENTANCE_PLUS then
-        coords = coords + Vector(0, 2)
-      end
-      if game:AchievementUnlocksDisallowed() then -- rgon
-        coords = coords + Vector(13, 0)
-      end
-      coords = coords + game.ScreenShakeOffset + (Options.HUDOffset * Vector(20, 12))
-      
-      -- https://bindingofisaacrebirth.wiki.gg/wiki/Greed_Donation_Machine#Jam_Chance
-      local percent = nil
-      local coins = mod:getCoinsDonated(game:GetPlayer(0):GetPlayerType())
-      if coins then
-        percent = math.floor(0.2 * math.min(100, math.exp(0.023 * coins) - 1) + 0.5)
-        if game.Difficulty == Difficulty.DIFFICULTY_GREEDIER then
-          percent = math.min(1, percent)
-        end
-      end
-      
-      if percent then
-        mod.sprite:SetFrame('Idle', 9)
-        mod.sprite:Render(coords)
-        mod.font:DrawString(percent .. '%', coords.X + 16, coords.Y, KColor.White, 0, false)
-      end
-    end
-  end
-end
-
 function mod:onDeliriumTransform(delirium, t, v, force)
   if game:IsGreedMode() then
     local level = game:GetLevel()
@@ -358,59 +378,19 @@ function mod:stopUltraGreedSounds()
   end
 end
 
--- rgon supports counts for modded players, it's not currently exposed in the api, we can't assume 100% like in vanilla
-function mod:getCoinsDonated(playerType)
-  if REPENTOGON then
-    local tbl = {
-      [PlayerType.PLAYER_ISAAC] = EventCounter.GREED_MODE_COINS_DONATED_WITH_ISAAC,
-      [PlayerType.PLAYER_MAGDALENE] = EventCounter.GREED_MODE_COINS_DONATED_WITH_MAGDALENE,
-      [PlayerType.PLAYER_CAIN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_CAIN,
-      [PlayerType.PLAYER_JUDAS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JUDAS,
-      [PlayerType.PLAYER_BLACKJUDAS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JUDAS,
-      [PlayerType.PLAYER_BLUEBABY] = EventCounter.GREED_MODE_COINS_DONATED_WITH_BLUE,
-      [PlayerType.PLAYER_EVE] = EventCounter.GREED_MODE_COINS_DONATED_WITH_EVE,
-      [PlayerType.PLAYER_SAMSON] = EventCounter.GREED_MODE_COINS_DONATED_WITH_SAMSON,
-      [PlayerType.PLAYER_AZAZEL] = EventCounter.GREED_MODE_COINS_DONATED_WITH_AZAZEL,
-      [PlayerType.PLAYER_LAZARUS] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LAZARUS,
-      [PlayerType.PLAYER_LAZARUS2] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LAZARUS,
-      [PlayerType.PLAYER_EDEN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_EDEN,
-      [PlayerType.PLAYER_THELOST] = EventCounter.GREED_MODE_COINS_DONATED_WITH_THE_LOST,
-      [PlayerType.PLAYER_LILITH] = EventCounter.GREED_MODE_COINS_DONATED_WITH_LILITH,
-      [PlayerType.PLAYER_KEEPER] = EventCounter.GREED_MODE_COINS_DONATED_WITH_KEEPER,
-      [PlayerType.PLAYER_APOLLYON] = EventCounter.GREED_MODE_COINS_DONATED_WITH_APOLLYON,
-      [PlayerType.PLAYER_THEFORGOTTEN] = EventCounter.GREED_MODE_COINS_DONATED_WITH_FORGOTTEN,
-      [PlayerType.PLAYER_THESOUL] = EventCounter.GREED_MODE_COINS_DONATED_WITH_FORGOTTEN,
-      [PlayerType.PLAYER_BETHANY] = EventCounter.GREED_MODE_COINS_DONATED_WITH_BETHANY,
-      [PlayerType.PLAYER_JACOB] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JACOB_AND_ESAU,
-      [PlayerType.PLAYER_ESAU] = EventCounter.GREED_MODE_COINS_DONATED_WITH_JACOB_AND_ESAU,
-      [PlayerType.PLAYER_ISAAC_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_ISAAC,
-      [PlayerType.PLAYER_MAGDALENE_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_MAGDALENE,
-      [PlayerType.PLAYER_CAIN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_CAIN,
-      [PlayerType.PLAYER_JUDAS_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JUDAS,
-      [PlayerType.PLAYER_BLUEBABY_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_BLUE_BABY,
-      [PlayerType.PLAYER_EVE_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_EVE,
-      [PlayerType.PLAYER_SAMSON_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_SAMSON,
-      [PlayerType.PLAYER_AZAZEL_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_AZAZEL,
-      [PlayerType.PLAYER_LAZARUS_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LAZARUS,
-      [PlayerType.PLAYER_LAZARUS2_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LAZARUS,
-      [PlayerType.PLAYER_EDEN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_EDEN,
-      [PlayerType.PLAYER_THELOST_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_LOST,
-      [PlayerType.PLAYER_LILITH_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_LILITH,
-      [PlayerType.PLAYER_KEEPER_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_KEEPER,
-      [PlayerType.PLAYER_APOLLYON_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_APOLLYON,
-      [PlayerType.PLAYER_THEFORGOTTEN_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_FORGOTTEN,
-      [PlayerType.PLAYER_THESOUL_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_THE_FORGOTTEN,
-      [PlayerType.PLAYER_BETHANY_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_BETHANY,
-      [PlayerType.PLAYER_JACOB_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JACOB_AND_ESAU,
-      [PlayerType.PLAYER_JACOB2_B] = EventCounter.GREED_MODE_COINS_DONATED_WITH_T_JACOB_AND_ESAU,
-    }
-    local counter = tbl[playerType]
-    if counter then
-      local gameData = Isaac.GetPersistentGameData()
-      return gameData:GetEventCounter(counter)
+-- cube of meat/ball of bandages/harbingers are available after defeating mom
+-- genesis/sacred orb can make cube of meat/ball of bandages unavailable
+-- book of revelations is available after defeating a harbinger
+function mod:hasMomBeenDefeated()
+  local itemConfig = Isaac.GetItemConfig()
+  
+  for _, v in ipairs({ CollectibleType.COLLECTIBLE_BOOK_OF_REVELATIONS, CollectibleType.COLLECTIBLE_CUBE_OF_MEAT, CollectibleType.COLLECTIBLE_BALL_OF_BANDAGES }) do
+    if itemConfig:GetCollectible(v):IsAvailable() then
+      return true
     end
   end
-  return nil
+  
+  return false
 end
 
 function mod:doRepentogonPostMegaSatan2Logic()
@@ -880,12 +860,12 @@ mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, mod.onGameStart)
 mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.onGameExit)
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.onNewRoom)
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.onUpdate)
+mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
 mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, mod.onPickupInit, PickupVariant.PICKUP_BIGCHEST)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_MEGA_SATAN_2)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, mod.onNpcUpdate, EntityType.ENTITY_DELIRIUM)
 mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.onPreSpawnAward)
 if REPENTOGON then
-  mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
   mod:AddCallback(DeliriumCallbacks.TRANSFORMATION , mod.onDeliriumTransform)
   mod:AddCallback(DeliriumCallbacks.POST_TRANSFORMATION , mod.onDeliriumPostTransform)
 else
