@@ -16,6 +16,8 @@ mod.state.applyToChallenges = false
 mod.state.spawnMegaSatanDoorEarly = false
 mod.state.allowDeliriumUltraGreedAppear = false
 mod.state.spawnFoolCard = false
+mod.state.recordMegaSatanCompletion = true
+mod.state.recordDeliriumCompletion = true
 
 function mod:onGameStart(isContinue)
   if mod:HasData() then
@@ -25,7 +27,7 @@ function mod:onGameStart(isContinue)
       if isContinue and type(state.megaSatanDoorOpened) == 'boolean' then
         mod.state.megaSatanDoorOpened = state.megaSatanDoorOpened
       end
-      for _, v in ipairs({ 'applyToChallenges', 'spawnMegaSatanDoorEarly', 'allowDeliriumUltraGreedAppear', 'spawnFoolCard' }) do
+      for _, v in ipairs({ 'applyToChallenges', 'spawnMegaSatanDoorEarly', 'allowDeliriumUltraGreedAppear', 'spawnFoolCard', 'recordMegaSatanCompletion', 'recordDeliriumCompletion' }) do
         if type(state[v]) == 'boolean' then
           mod.state[v] = state[v]
         end
@@ -66,6 +68,8 @@ function mod:save(settingsOnly)
     state.spawnMegaSatanDoorEarly = mod.state.spawnMegaSatanDoorEarly
     state.allowDeliriumUltraGreedAppear = mod.state.allowDeliriumUltraGreedAppear
     state.spawnFoolCard = mod.state.spawnFoolCard
+    state.recordMegaSatanCompletion = mod.state.recordMegaSatanCompletion
+    state.recordDeliriumCompletion = mod.state.recordDeliriumCompletion
     
     mod:SaveData(json.encode(state))
   else
@@ -394,7 +398,7 @@ function mod:hasMomBeenDefeated()
 end
 
 function mod:doRepentogonPostMegaSatan2Logic()
-  if REPENTOGON then
+  if REPENTOGON and mod.state.recordMegaSatanCompletion then
     local gameData = Isaac.GetPersistentGameData()
     gameData:IncreaseEventCounter(EventCounter.MEGA_SATAN_KILLS, 1)
     game:RecordPlayerCompletion(CompletionType.MEGA_SATAN)
@@ -402,7 +406,7 @@ function mod:doRepentogonPostMegaSatan2Logic()
 end
 
 function mod:doRepentogonPostDeliriumLogic()
-  if REPENTOGON then
+  if REPENTOGON and mod.state.recordDeliriumCompletion then
     local gameData = Isaac.GetPersistentGameData()
     gameData:IncreaseEventCounter(EventCounter.DELIRIUM_KILLS, 1)
     game:RecordPlayerCompletion(CompletionType.DELIRIUM)
@@ -823,7 +827,9 @@ function mod:setupModConfigMenu()
   for _, v in ipairs({
                       { title = nil          , field = 'applyToChallenges'            , txtTrue = 'Apply to challenges'               , txtFalse = 'Do not apply to challenges'               , trigger = true , info = { 'Should the settings below', 'be applied to challenges?' } },
                       { title = 'Mega Satan' , field = 'spawnMegaSatanDoorEarly'      , txtTrue = 'Spawn door before ultra greed'     , txtFalse = 'Spawn door after ultra greed'             , trigger = true , info = { 'Before: Fight mega satan instead of ultra greed', 'After: Fight mega satan after ultra greed' } },
+                      { title = nil          , field = 'recordMegaSatanCompletion'    , txtTrue = 'Record completion'                 , txtFalse = 'Do not record completion'                 , trigger = false, info = { 'Gives achievements in greed mode', 'Requires repentogon' } },
                       { title = 'Delirium'   , field = 'allowDeliriumUltraGreedAppear', txtTrue = 'Allow ultra greed appear animation', txtFalse = 'Do not allow ultra greed appear animation', trigger = false, info = { 'Ultra greed\'s appear animation hijacks the camera', 'This might be ok if you\'re zoomed out' } },
+                      { title = nil          , field = 'recordDeliriumCompletion'     , txtTrue = 'Record completion'                 , txtFalse = 'Do not record completion'                 , trigger = false, info = { 'Gives achievements in greed mode', 'Requires repentogon' } },
                       { title = 'Ultra Greed', field = 'spawnFoolCard'                , txtTrue = 'Spawn fool card'                   , txtFalse = 'Do not spawn fool card'                   , trigger = false, info = { 'Spawn 0 - The Fool after defeating ultra greed?', 'Only applies to greed mode (not greedier)' } },
                     })
   do
