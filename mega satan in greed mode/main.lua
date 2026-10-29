@@ -266,7 +266,9 @@ function mod:onNpcUpdate(entityNpc)
   
   if entityNpc.Type == EntityType.ENTITY_MEGA_SATAN_2 then
     -- mega satan 2 head
-    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.HitPoints <= 0 then
+    -- used to check HitPoints <= 0, but that doesn't work with chaos card, same with IsDead and HasMortalDamage
+    -- I2 seems to be 9, not sure what that means though
+    if stage == LevelStage.STAGE7_GREED and roomDesc.GridIndex == GridRooms.ROOM_MEGA_SATAN_IDX and entityNpc.Variant == 0 and entityNpc.State == NpcState.STATE_SPECIAL then
       local sprite = entityNpc:GetSprite()
       if sprite:IsPlaying('Death') and sprite:GetFrame() + sprite.PlaybackSpeed - 1 >= mod.megaSatan2DeathAnimLastFrame then
         local centerIdx = room:GetGridIndex(room:GetCenterPos())
@@ -613,10 +615,6 @@ function mod:spawnDeliriumRoom()
       if room:IsDoorSlotAllowed(v) and room:GetDoor(v) == nil then
         local data = RoomConfigHolder.GetRoomByStageTypeAndVariant(StbType.SPECIAL_ROOMS, RoomType.ROOM_BOSS, 3414, -1)
         if level:TryPlaceRoomAtDoor(data, roomDesc, v, 0, true, true) then
-          if MinimapAPI then -- normal map is fine, but minimapi needs a refresh
-            MinimapAPI:ClearMap()
-            MinimapAPI:LoadDefaultMap()
-          end
           return
         end
       end
